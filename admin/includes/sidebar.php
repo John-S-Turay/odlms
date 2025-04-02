@@ -108,7 +108,7 @@ foreach($results as $row)
             <li><a href="approved-appointment.php"><span class="menu-text">Approved</span></a></li>
             <li><a href="rejected-appointment.php"><span class="menu-text">Rejected</span></a></li>
             <li><a href="usercancel-appointment.php"><span class="menu-text">User Cancelled</span></a></li>
-           
+            <li><a href="manage_availability.php"><span class="menu-text">Manage Availability</span></a></li>
           </ul>
         </li>
 
