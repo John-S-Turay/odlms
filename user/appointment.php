@@ -26,9 +26,19 @@ if (!isset($_SESSION['odlmsuid']) || strlen($_SESSION['odlmsuid']) == 0) {
         $dob = $_POST['dob']; // Date of birth
         $mobnum = $_POST['mobnum']; // Mobile number
         $email = $_POST['email']; // Email ID
+        $address = $_POST['address']; // Home address
         $aptdate = $_POST['aptdate']; // Appointment date
         $apttime = $_POST['apttime']; // Appointment time
         $aptnumber = mt_rand(100000000, 999999999); // Generate a random appointment number
+
+        // Validate address
+        if (empty(trim($address))) {
+            echo '<script>alert("Please enter your home address");</script>';
+            exit();
+        }
+
+        // Sanitize address
+        $address = htmlspecialchars(trim($address), ENT_QUOTES, 'UTF-8');
 
         // Determine if this is for lab tests or doctor appointment
         $is_lab = isset($_POST['tids']) && count($_POST['tids']) > 0 ? 1 : 0;
@@ -77,8 +87,8 @@ if (!isset($_SESSION['odlmsuid']) || strlen($_SESSION['odlmsuid']) == 0) {
                 move_uploaded_file($_FILES["pres"]["tmp_name"], "images/" . $pres);
 
                 // Insert appointment data into the database
-                $sql = "INSERT INTO tblappointment (UserID, AppointmentNumber, PatientName, Gender, DOB, MobileNumber, Email, AppointmentDate, AppointmentTime, Prescription, availability_id) 
-                        VALUES (:uid, :aptnumber, :pname, :gender, :dob, :mobnum, :email, :aptdate, :apttime, :pres, :availability_id)";
+                $sql = "INSERT INTO tblappointment (UserID, AppointmentNumber, PatientName, Gender, DOB, MobileNumber, Email, address, AppointmentDate, AppointmentTime, Prescription, availability_id) 
+                        VALUES (:uid, :aptnumber, :pname, :gender, :dob, :mobnum, :email, :address, :aptdate, :apttime, :pres, :availability_id)";
                 $query = $dbh->prepare($sql);
                 // Bind parameters to prevent SQL injection
                 $query->bindParam(':pname', $pname, PDO::PARAM_STR);
@@ -86,6 +96,7 @@ if (!isset($_SESSION['odlmsuid']) || strlen($_SESSION['odlmsuid']) == 0) {
                 $query->bindParam(':dob', $dob, PDO::PARAM_STR);
                 $query->bindParam(':mobnum', $mobnum, PDO::PARAM_STR);
                 $query->bindParam(':email', $email, PDO::PARAM_STR);
+                $query->bindParam(':address', $address, PDO::PARAM_STR);
                 $query->bindParam(':aptdate', $aptdate, PDO::PARAM_STR);
                 $query->bindParam(':apttime', $apttime, PDO::PARAM_STR);
                 $query->bindParam(':pres', $pres, PDO::PARAM_STR);
@@ -124,8 +135,8 @@ if (!isset($_SESSION['odlmsuid']) || strlen($_SESSION['odlmsuid']) == 0) {
             }
         } else {
             // If no file is uploaded, insert data without the prescription field
-            $sql = "INSERT INTO tblappointment (UserID, AppointmentNumber, PatientName, Gender, DOB, MobileNumber, Email, AppointmentDate, AppointmentTime, availability_id) 
-                    VALUES (:uid, :aptnumber, :pname, :gender, :dob, :mobnum, :email, :aptdate, :apttime, :availability_id)";
+            $sql = "INSERT INTO tblappointment (UserID, AppointmentNumber, PatientName, Gender, DOB, MobileNumber, Email, address, AppointmentDate, AppointmentTime, availability_id) 
+                    VALUES (:uid, :aptnumber, :pname, :gender, :dob, :mobnum, :email, :address, :aptdate, :apttime, :availability_id)";
             $query = $dbh->prepare($sql);
             // Bind parameters
             $query->bindParam(':pname', $pname, PDO::PARAM_STR);
@@ -133,6 +144,7 @@ if (!isset($_SESSION['odlmsuid']) || strlen($_SESSION['odlmsuid']) == 0) {
             $query->bindParam(':dob', $dob, PDO::PARAM_STR);
             $query->bindParam(':mobnum', $mobnum, PDO::PARAM_STR);
             $query->bindParam(':email', $email, PDO::PARAM_STR);
+            $query->bindParam(':address', $address, PDO::PARAM_STR);
             $query->bindParam(':aptdate', $aptdate, PDO::PARAM_STR);
             $query->bindParam(':apttime', $apttime, PDO::PARAM_STR);
             $query->bindParam(':aptnumber', $aptnumber, PDO::PARAM_STR);
@@ -242,6 +254,11 @@ if (!isset($_SESSION['odlmsuid']) || strlen($_SESSION['odlmsuid']) == 0) {
                                     <div class="form-group">
                                         <label for="exampleInputEmail1">Email ID</label>
                                         <input type="email" class="form-control" id="email" name="email" required="true">
+                                    </div>
+                                    <!-- Home Address - NEW FIELD -->
+                                    <div class="form-group">
+                                        <label for="address">Home Address</label>
+                                        <textarea class="form-control" id="address" name="address" rows="3" required="true"></textarea>
                                     </div>
                                     <!-- Appointment Date -->
                                     <div class="form-group">
