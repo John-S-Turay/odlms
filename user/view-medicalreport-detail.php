@@ -68,10 +68,14 @@ $vid = $_GET['viewid'];
                             <div class="widget-body">
                                 <div class="table-responsive">
                                     <?php
-                                    // Fetch appointment details from the database
-                                    $sql = "SELECT * FROM tblappointment WHERE ID = :vid";
+                                    // Fetch appointment details from the database with report information
+                                    $sql = "SELECT a.*, r.file_name as report_filename 
+                                            FROM tblappointment a
+                                            LEFT JOIN tbl_reports r ON a.report_id = r.id
+                                            WHERE a.ID = :vid AND a.UserID = :userid";
                                     $query = $dbh->prepare($sql);
                                     $query->bindParam(':vid', $vid, PDO::PARAM_STR);
+                                    $query->bindParam(':userid', $_SESSION['odlmsuid'], PDO::PARAM_STR);
                                     $query->execute();
                                     $results = $query->fetchAll(PDO::FETCH_OBJ);
 
@@ -163,8 +167,8 @@ $vid = $_GET['viewid'];
                                                     <th>Report</th>
                                                     <td>
                                                         <?php
-                                                        if (!empty($row->Report)) {
-                                                            echo '<a href="../admin/images/' . htmlspecialchars($row->Report) . '" target="_blank">Download Report</a>';
+                                                        if (!empty($row->report_id)) {
+                                                            echo '<a href="download-report.php?id=' . htmlspecialchars($row->report_id) . '" target="_blank">Download Report</a>';
                                                         } else {
                                                             echo "NA";
                                                         }
@@ -177,7 +181,7 @@ $vid = $_GET['viewid'];
                                     <?php
                                         }
                                     } else {
-                                        echo '<p class="text-center">No appointment details found.</p>';
+                                        echo '<p class="text-center">No appointment details found or you are not authorized to view this appointment.</p>';
                                     }
                                     ?>
                                 </div>
