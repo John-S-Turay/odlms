@@ -99,6 +99,10 @@ $vid = $_GET['viewid'];
                                                     <td><?php echo htmlspecialchars($row->Email); ?></td>
                                                 </tr>
                                                 <tr>
+                                                    <th>Home Address</th>
+                                                    <td><?php echo htmlspecialchars($row->address); ?></td>
+                                                </tr>
+                                                <tr>
                                                     <th>Appointment Date</th>
                                                     <td><?php echo htmlspecialchars($row->AppointmentDate); ?></td>
                                                     <th>Appointment Time</th>
