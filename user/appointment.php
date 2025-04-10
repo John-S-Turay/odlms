@@ -31,7 +31,6 @@ if (!isset($_SESSION['odlmsuid']) || strlen($_SESSION['odlmsuid']) == 0) {
         $apttime = $_POST['apttime']; // Appointment time
         $aptnumber = mt_rand(100000000, 999999999); // Generate a random appointment number
 
-       
         // Validate date of birth
         if (empty($dob)) {
             echo '<script>alert("Please enter your date of birth");</script>';
@@ -85,26 +84,46 @@ if (!isset($_SESSION['odlmsuid']) || strlen($_SESSION['odlmsuid']) == 0) {
         }
 
         // Handle file upload for prescription
-        $pres = $_FILES["pres"]["name"]; // Get the file name
-        $extension = substr($pres, strlen($pres) - 4, strlen($pres)); // Extract file extension
-        $allowed_extensions = array(".jpg", "jpeg", ".png", ".gif", ".pdf"); // Allowed file types
+        if (isset($_FILES['pres']) && $_FILES['pres']['error'] == UPLOAD_ERR_OK) {
+            $pres = $_FILES['pres'];
+            $extension = strtolower(pathinfo($pres['name'], PATHINFO_EXTENSION));
+            $allowed_extensions = array("jpg", "jpeg", "png", "gif", "pdf");
 
-        // Check if a file is uploaded
-        if (!empty($pres)) {
-            // Validate file extension
             if (!in_array($extension, $allowed_extensions)) {
-                echo "<script>alert('Prescription has Invalid format. Only jpg / jpeg/ png /gif format allowed');</script>";
-            } else {
-                // Rename the file to avoid conflicts
-                $pres = md5($pres) . time() . $extension;
-                // Move the uploaded file to the "images" directory
-                move_uploaded_file($_FILES["pres"]["tmp_name"], "images/" . $pres);
+                echo "<script>alert('Prescription has invalid format. Only jpg/jpeg/png/gif/pdf allowed');</script>";
+                exit();
+            }
 
-                // Insert appointment data into the database
-                $sql = "INSERT INTO tblappointment (UserID, AppointmentNumber, PatientName, Gender, DOB, MobileNumber, Email, address, AppointmentDate, AppointmentTime, Prescription, availability_id) 
-                        VALUES (:uid, :aptnumber, :pname, :gender, :dob, :mobnum, :email, :address, :aptdate, :apttime, :pres, :availability_id)";
+            // Prepare file data for database
+            $fileData = file_get_contents($pres['tmp_name']);
+            $mimeType = mime_content_type($pres['tmp_name']);
+            $fileSize = $pres['size'];
+            $fileName = "prescription_".time().".".$extension;
+
+            try {
+                $dbh->beginTransaction();
+
+                // Store prescription in database
+                $sql = "INSERT INTO tbl_prescriptions 
+                        (user_id, appointment_id, file_name, file_data, mime_type, file_size)
+                        VALUES (:user_id, :appointment_id, :file_name, :file_data, :mime_type, :file_size)";
                 $query = $dbh->prepare($sql);
-                // Bind parameters to prevent SQL injection
+                $query->bindParam(':user_id', $_SESSION['odlmsuid'], PDO::PARAM_INT);
+                $query->bindParam(':appointment_id', $appointmentId, PDO::PARAM_INT);
+                $query->bindParam(':file_name', $fileName, PDO::PARAM_STR);
+                $query->bindParam(':file_data', $fileData, PDO::PARAM_LOB);
+                $query->bindParam(':mime_type', $mimeType, PDO::PARAM_STR);
+                $query->bindParam(':file_size', $fileSize, PDO::PARAM_INT);
+                $query->execute();
+                $prescriptionId = $dbh->lastInsertId();
+
+                // Insert appointment with prescription reference
+                $sql = "INSERT INTO tblappointment 
+                        (UserID, AppointmentNumber, PatientName, Gender, DOB, MobileNumber, Email, address, 
+                        AppointmentDate, AppointmentTime, prescription_id, availability_id) 
+                        VALUES (:uid, :aptnumber, :pname, :gender, :dob, :mobnum, :email, :address, 
+                        :aptdate, :apttime, :prescription_id, :availability_id)";
+                $query = $dbh->prepare($sql);
                 $query->bindParam(':pname', $pname, PDO::PARAM_STR);
                 $query->bindParam(':gender', $gender, PDO::PARAM_STR);
                 $query->bindParam(':dob', $dob, PDO::PARAM_STR);
@@ -113,23 +132,19 @@ if (!isset($_SESSION['odlmsuid']) || strlen($_SESSION['odlmsuid']) == 0) {
                 $query->bindParam(':address', $address, PDO::PARAM_STR);
                 $query->bindParam(':aptdate', $aptdate, PDO::PARAM_STR);
                 $query->bindParam(':apttime', $apttime, PDO::PARAM_STR);
-                $query->bindParam(':pres', $pres, PDO::PARAM_STR);
                 $query->bindParam(':aptnumber', $aptnumber, PDO::PARAM_STR);
                 $query->bindParam(':uid', $uid, PDO::PARAM_STR);
+                $query->bindParam(':prescription_id', $prescriptionId, PDO::PARAM_INT);
                 $query->bindParam(':availability_id', $slot->id, PDO::PARAM_INT);
-
-                // Execute the query
                 $query->execute();
-
-                // Get the last inserted ID
                 $LastInsertId = $dbh->lastInsertId();
+
                 if ($LastInsertId > 0) {
                     // Handle test requests if any
                     if (isset($_POST['tids'])) {
                         $tid = $_POST['tids'];
                         for ($i = 0; $i < count($tid); $i++) {
                             $tvid = $tid[$i];
-                            // Insert test request data into the database
                             $sql = "INSERT INTO tbltestrequest (AppointmentNumber, TestID, MobileNumber) 
                                     VALUES (:aptnumber, :tvid, :mobnum)";
                             $query = $dbh->prepare($sql);
@@ -201,19 +216,24 @@ if (!isset($_SESSION['odlmsuid']) || strlen($_SESSION['odlmsuid']) == 0) {
                         $payment_message = " Payment of $" . number_format($amount, 2) . " was processed successfully.";
                     }
 
-                    // Show success message with the appointment number
+                    $dbh->commit();
                     echo '<script>alert("Your Appointment has been taken successfully. Appointment number is ' . $aptnumber . '.' . $payment_message . '")</script>';
                 } else {
-                    // Show error message if something went wrong
+                    $dbh->rollBack();
                     echo '<script>alert("Something Went Wrong. Please try again")</script>';
                 }
+            } catch (Exception $e) {
+                $dbh->rollBack();
+                echo '<script>alert("Error: ' . $e->getMessage() . '")</script>';
             }
         } else {
-            // If no file is uploaded, insert data without the prescription field
-            $sql = "INSERT INTO tblappointment (UserID, AppointmentNumber, PatientName, Gender, DOB, MobileNumber, Email, address, AppointmentDate, AppointmentTime, availability_id) 
-                    VALUES (:uid, :aptnumber, :pname, :gender, :dob, :mobnum, :email, :address, :aptdate, :apttime, :availability_id)";
+            // If no file is uploaded, insert data without prescription
+            $sql = "INSERT INTO tblappointment 
+                    (UserID, AppointmentNumber, PatientName, Gender, DOB, MobileNumber, Email, address, 
+                    AppointmentDate, AppointmentTime, availability_id) 
+                    VALUES (:uid, :aptnumber, :pname, :gender, :dob, :mobnum, :email, :address, 
+                    :aptdate, :apttime, :availability_id)";
             $query = $dbh->prepare($sql);
-            // Bind parameters
             $query->bindParam(':pname', $pname, PDO::PARAM_STR);
             $query->bindParam(':gender', $gender, PDO::PARAM_STR);
             $query->bindParam(':dob', $dob, PDO::PARAM_STR);
@@ -225,12 +245,9 @@ if (!isset($_SESSION['odlmsuid']) || strlen($_SESSION['odlmsuid']) == 0) {
             $query->bindParam(':aptnumber', $aptnumber, PDO::PARAM_STR);
             $query->bindParam(':uid', $uid, PDO::PARAM_STR);
             $query->bindParam(':availability_id', $slot->id, PDO::PARAM_INT);
-
-            // Execute the query
             $query->execute();
-
-            // Get the last inserted ID
             $LastInsertId = $dbh->lastInsertId();
+
             if ($LastInsertId > 0) {
                 // Handle test requests if any
                 if (isset($_POST['tids'])) {
@@ -308,16 +325,15 @@ if (!isset($_SESSION['odlmsuid']) || strlen($_SESSION['odlmsuid']) == 0) {
                     $payment_message = " Payment of $" . number_format($amount, 2) . " was processed successfully.";
                 }
 
-                // Show success message with the appointment number
                 echo '<script>alert("Your Appointment has been taken successfully. Appointment number is ' . $aptnumber . '.' . $payment_message . '")</script>';
             } else {
-                // Show error message if something went wrong
                 echo '<script>alert("Something Went Wrong. Please try again")</script>';
             }
         }
     }
 }
 ?>
+
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -428,7 +444,8 @@ if (!isset($_SESSION['odlmsuid']) || strlen($_SESSION['odlmsuid']) == 0) {
                                     <!-- Prescription Upload -->
                                     <div class="form-group">
                                         <label for="exampleInputFile">Prescription (if any)</label>
-                                        <input type="file" id="pres" class="form-control" name="pres">
+                                        <input type="file" id="pres" class="form-control" name="pres" accept=".jpg,.jpeg,.png,.gif,.pdf">
+                                        <small class="text-muted">Accepted formats: JPG, JPEG, PNG, GIF, PDF</small>
                                     </div>
                                     <!-- Test Selection -->
                                     <div class="form-group">
