@@ -26,9 +26,32 @@ if (!isset($_SESSION['odlmsuid']) || strlen($_SESSION['odlmsuid']) == 0) {
         $dob = $_POST['dob']; // Date of birth
         $mobnum = $_POST['mobnum']; // Mobile number
         $email = $_POST['email']; // Email ID
+        $address = $_POST['address']; // Home address
         $aptdate = $_POST['aptdate']; // Appointment date
         $apttime = $_POST['apttime']; // Appointment time
         $aptnumber = mt_rand(100000000, 999999999); // Generate a random appointment number
+
+        // Validate date of birth
+        if (empty($dob)) {
+            echo '<script>alert("Please enter your date of birth");</script>';
+            exit();
+        }
+
+        // Validate date format and ensure it's not in the future
+        $dob_timestamp = strtotime($dob);
+        if (!$dob_timestamp || $dob_timestamp > time()) {
+            echo '<script>alert("Please enter a valid date of birth in the past");</script>';
+            exit();
+        }
+       
+        // Validate address
+        if (empty(trim($address))) {
+            echo '<script>alert("Please enter your home address");</script>';
+            exit();
+        }
+
+        // Sanitize address
+        $address = htmlspecialchars(trim($address), ENT_QUOTES, 'UTF-8');
 
         // Determine if this is for lab tests or doctor appointment
         $is_lab = isset($_POST['tids']) && count($_POST['tids']) > 0 ? 1 : 0;
@@ -61,50 +84,66 @@ if (!isset($_SESSION['odlmsuid']) || strlen($_SESSION['odlmsuid']) == 0) {
         }
 
         // Handle file upload for prescription
-        $pres = $_FILES["pres"]["name"]; // Get the file name
-        $extension = substr($pres, strlen($pres) - 4, strlen($pres)); // Extract file extension
-        $allowed_extensions = array(".jpg", "jpeg", ".png", ".gif", ".pdf"); // Allowed file types
+        if (isset($_FILES['pres']) && $_FILES['pres']['error'] == UPLOAD_ERR_OK) {
+            $pres = $_FILES['pres'];
+            $extension = strtolower(pathinfo($pres['name'], PATHINFO_EXTENSION));
+            $allowed_extensions = array("jpg", "jpeg", "png", "gif", "pdf");
 
-        // Check if a file is uploaded
-        if (!empty($pres)) {
-            // Validate file extension
             if (!in_array($extension, $allowed_extensions)) {
-                echo "<script>alert('Prescription has Invalid format. Only jpg / jpeg/ png /gif format allowed');</script>";
-            } else {
-                // Rename the file to avoid conflicts
-                $pres = md5($pres) . time() . $extension;
-                // Move the uploaded file to the "images" directory
-                move_uploaded_file($_FILES["pres"]["tmp_name"], "images/" . $pres);
+                echo "<script>alert('Prescription has invalid format. Only jpg/jpeg/png/gif/pdf allowed');</script>";
+                exit();
+            }
 
-                // Insert appointment data into the database
-                $sql = "INSERT INTO tblappointment (UserID, AppointmentNumber, PatientName, Gender, DOB, MobileNumber, Email, AppointmentDate, AppointmentTime, Prescription, availability_id) 
-                        VALUES (:uid, :aptnumber, :pname, :gender, :dob, :mobnum, :email, :aptdate, :apttime, :pres, :availability_id)";
+            // Prepare file data for database
+            $fileData = file_get_contents($pres['tmp_name']);
+            $mimeType = mime_content_type($pres['tmp_name']);
+            $fileSize = $pres['size'];
+            $fileName = "prescription_".time().".".$extension;
+
+            try {
+                $dbh->beginTransaction();
+
+                // Insert appointment with prescription reference
+                $sql = "INSERT INTO tblappointment 
+                        (UserID, AppointmentNumber, PatientName, Gender, DOB, MobileNumber, Email, address, 
+                        AppointmentDate, AppointmentTime, availability_id) 
+                        VALUES (:uid, :aptnumber, :pname, :gender, :dob, :mobnum, :email, :address, 
+                        :aptdate, :apttime, :availability_id)";
                 $query = $dbh->prepare($sql);
-                // Bind parameters to prevent SQL injection
                 $query->bindParam(':pname', $pname, PDO::PARAM_STR);
                 $query->bindParam(':gender', $gender, PDO::PARAM_STR);
                 $query->bindParam(':dob', $dob, PDO::PARAM_STR);
                 $query->bindParam(':mobnum', $mobnum, PDO::PARAM_STR);
                 $query->bindParam(':email', $email, PDO::PARAM_STR);
+                $query->bindParam(':address', $address, PDO::PARAM_STR);
                 $query->bindParam(':aptdate', $aptdate, PDO::PARAM_STR);
                 $query->bindParam(':apttime', $apttime, PDO::PARAM_STR);
-                $query->bindParam(':pres', $pres, PDO::PARAM_STR);
                 $query->bindParam(':aptnumber', $aptnumber, PDO::PARAM_STR);
                 $query->bindParam(':uid', $uid, PDO::PARAM_STR);
                 $query->bindParam(':availability_id', $slot->id, PDO::PARAM_INT);
-
-                // Execute the query
                 $query->execute();
+                $appointmentId = $dbh->lastInsertId();
 
-                // Get the last inserted ID
+                // Store prescription in database
+                $sql = "INSERT INTO tbl_prescriptions 
+                        (user_id, appointment_id, file_name, file_data, mime_type, file_size)
+                        VALUES (:user_id, :appointment_id, :file_name, :file_data, :mime_type, :file_size)";
+                $query = $dbh->prepare($sql);
+                $query->bindParam(':user_id', $_SESSION['odlmsuid'], PDO::PARAM_INT);
+                $query->bindParam(':appointment_id', $appointmentId, PDO::PARAM_INT);
+                $query->bindParam(':file_name', $fileName, PDO::PARAM_STR);
+                $query->bindParam(':file_data', $fileData, PDO::PARAM_LOB);
+                $query->bindParam(':mime_type', $mimeType, PDO::PARAM_STR);
+                $query->bindParam(':file_size', $fileSize, PDO::PARAM_INT);
+                $query->execute();
                 $LastInsertId = $dbh->lastInsertId();
+
                 if ($LastInsertId > 0) {
                     // Handle test requests if any
                     if (isset($_POST['tids'])) {
                         $tid = $_POST['tids'];
                         for ($i = 0; $i < count($tid); $i++) {
                             $tvid = $tid[$i];
-                            // Insert test request data into the database
                             $sql = "INSERT INTO tbltestrequest (AppointmentNumber, TestID, MobileNumber) 
                                     VALUES (:aptnumber, :tvid, :mobnum)";
                             $query = $dbh->prepare($sql);
@@ -115,35 +154,99 @@ if (!isset($_SESSION['odlmsuid']) || strlen($_SESSION['odlmsuid']) == 0) {
                         }
                     }
 
-                    // Show success message with the appointment number
-                    echo '<script>alert("Your Appointment has been taken successfully. Appointment number is " + "' . $aptnumber . '")</script>';
+                    // Handle payment if credit card was selected
+                    $payment_message = "";
+                    if (isset($_POST['payment_method']) && $_POST['payment_method'] == 'card') {
+                        // Validate card details (demo validation)
+                        $card_number = str_replace(' ', '', $_POST['card_number']);
+                        $card_expiry = $_POST['card_expiry'];
+                        $card_cvc = $_POST['card_cvc'];
+                        $card_name = $_POST['card_name'];
+                        
+                        // Simple validation for demo purposes
+                        if (strlen($card_number) != 16 || !is_numeric($card_number)) {
+                            echo '<script>alert("Invalid card number. Please enter a 16-digit card number.");</script>';
+                            exit();
+                        }
+                        
+                        if (!preg_match('/^\d{2}\/\d{2}$/', $card_expiry)) {
+                            echo '<script>alert("Invalid expiry date. Please use MM/YY format.");</script>';
+                            exit();
+                        }
+                        
+                        if (strlen($card_cvc) != 3 || !is_numeric($card_cvc)) {
+                            echo '<script>alert("Invalid CVC. Please enter a 3-digit code.");</script>';
+                            exit();
+                        }
+                        
+                        // Calculate amount (in a real system, you'd calculate based on services)
+                        $amount = 0;
+                        if (isset($_POST['tids'])) {
+                            // Sum up test prices
+                            $tid_list = implode(',', array_map('intval', $_POST['tids']));
+                            $sql = "SELECT SUM(Price) as total FROM tbllabtest WHERE ID IN ($tid_list)";
+                            $query = $dbh->prepare($sql);
+                            $query->execute();
+                            $result = $query->fetch(PDO::FETCH_OBJ);
+                            $amount = $result->total ?: 0;
+                        } else {
+                            // Base consultation fee
+                            $amount = 50.00; // Default amount for doctor visit
+                        }
+                        
+                        // Process demo payment (in a real system, you'd call a payment gateway here)
+                        $transaction_id = 'DEMO_' . uniqid();
+                        $card_last_four = substr($card_number, -4);
+                        
+                        // Record payment
+                        $sql = "INSERT INTO tblpayments 
+                                (appointment_number, user_id, payment_method, card_last_four, amount, payment_status, transaction_id) 
+                                VALUES 
+                                (:aptnumber, :uid, 'card', :card_last_four, :amount, 'completed', :transaction_id)";
+                        $query = $dbh->prepare($sql);
+                        $query->bindParam(':aptnumber', $aptnumber, PDO::PARAM_STR);
+                        $query->bindParam(':uid', $uid, PDO::PARAM_INT);
+                        $query->bindParam(':card_last_four', $card_last_four, PDO::PARAM_STR);
+                        $query->bindParam(':amount', $amount, PDO::PARAM_STR);
+                        $query->bindParam(':transaction_id', $transaction_id, PDO::PARAM_STR);
+                        $query->execute();
+                        
+                        // Add payment success message
+                        $payment_message = " Payment of $" . number_format($amount, 2) . " was processed successfully.";
+                    }
+
+                    $dbh->commit();
+                    echo '<script>alert("Your Appointment has been taken successfully. Appointment number is ' . $aptnumber . '.' . $payment_message . '")</script>';
                 } else {
-                    // Show error message if something went wrong
+                    $dbh->rollBack();
                     echo '<script>alert("Something Went Wrong. Please try again")</script>';
                 }
+            } catch (Exception $e) {
+                $dbh->rollBack();
+                echo '<script>alert("Error: ' . $e->getMessage() . '")</script>';
             }
         } else {
-            // If no file is uploaded, insert data without the prescription field
-            $sql = "INSERT INTO tblappointment (UserID, AppointmentNumber, PatientName, Gender, DOB, MobileNumber, Email, AppointmentDate, AppointmentTime, availability_id) 
-                    VALUES (:uid, :aptnumber, :pname, :gender, :dob, :mobnum, :email, :aptdate, :apttime, :availability_id)";
+            // If no file is uploaded, insert data without prescription
+            $sql = "INSERT INTO tblappointment 
+                    (UserID, AppointmentNumber, PatientName, Gender, DOB, MobileNumber, Email, address, 
+                    AppointmentDate, AppointmentTime, availability_id) 
+                    VALUES (:uid, :aptnumber, :pname, :gender, :dob, :mobnum, :email, :address, 
+                    :aptdate, :apttime, :availability_id)";
             $query = $dbh->prepare($sql);
-            // Bind parameters
             $query->bindParam(':pname', $pname, PDO::PARAM_STR);
             $query->bindParam(':gender', $gender, PDO::PARAM_STR);
             $query->bindParam(':dob', $dob, PDO::PARAM_STR);
             $query->bindParam(':mobnum', $mobnum, PDO::PARAM_STR);
             $query->bindParam(':email', $email, PDO::PARAM_STR);
+            $query->bindParam(':address', $address, PDO::PARAM_STR);
             $query->bindParam(':aptdate', $aptdate, PDO::PARAM_STR);
             $query->bindParam(':apttime', $apttime, PDO::PARAM_STR);
             $query->bindParam(':aptnumber', $aptnumber, PDO::PARAM_STR);
             $query->bindParam(':uid', $uid, PDO::PARAM_STR);
             $query->bindParam(':availability_id', $slot->id, PDO::PARAM_INT);
-
-            // Execute the query
             $query->execute();
-
-            // Get the last inserted ID
             $LastInsertId = $dbh->lastInsertId();
+
             if ($LastInsertId > 0) {
                 // Handle test requests if any
                 if (isset($_POST['tids'])) {
@@ -160,16 +263,76 @@ if (!isset($_SESSION['odlmsuid']) || strlen($_SESSION['odlmsuid']) == 0) {
                     }
                 }
 
-                // Show success message with the appointment number
-                echo '<script>alert("Your Appointment has been taken successfully. Appointment number is " + "' . $aptnumber . '")</script>';
+                // Handle payment if credit card was selected
+                $payment_message = "";
+                if (isset($_POST['payment_method']) && $_POST['payment_method'] == 'card') {
+                    // Validate card details (demo validation)
+                    $card_number = str_replace(' ', '', $_POST['card_number']);
+                    $card_expiry = $_POST['card_expiry'];
+                    $card_cvc = $_POST['card_cvc'];
+                    $card_name = $_POST['card_name'];
+                    
+                    // Simple validation for demo purposes
+                    if (strlen($card_number) != 16 || !is_numeric($card_number)) {
+                        echo '<script>alert("Invalid card number. Please enter a 16-digit card number.");</script>';
+                        exit();
+                    }
+                    
+                    if (!preg_match('/^\d{2}\/\d{2}$/', $card_expiry)) {
+                        echo '<script>alert("Invalid expiry date. Please use MM/YY format.");</script>';
+                        exit();
+                    }
+                    
+                    if (strlen($card_cvc) != 3 || !is_numeric($card_cvc)) {
+                        echo '<script>alert("Invalid CVC. Please enter a 3-digit code.");</script>';
+                        exit();
+                    }
+                    
+                    // Calculate amount (in a real system, you'd calculate based on services)
+                    $amount = 0;
+                    if (isset($_POST['tids'])) {
+                        // Sum up test prices
+                        $tid_list = implode(',', array_map('intval', $_POST['tids']));
+                        $sql = "SELECT SUM(Price) as total FROM tbllabtest WHERE ID IN ($tid_list)";
+                        $query = $dbh->prepare($sql);
+                        $query->execute();
+                        $result = $query->fetch(PDO::FETCH_OBJ);
+                        $amount = $result->total ?: 0;
+                    } else {
+                        // Base consultation fee
+                        $amount = 50.00; // Default amount for doctor visit
+                    }
+                    
+                    // Process demo payment (in a real system, you'd call a payment gateway here)
+                    $transaction_id = 'DEMO_' . uniqid();
+                    $card_last_four = substr($card_number, -4);
+                    
+                    // Record payment
+                    $sql = "INSERT INTO tblpayments 
+                            (appointment_number, user_id, payment_method, card_last_four, amount, payment_status, transaction_id) 
+                            VALUES 
+                            (:aptnumber, :uid, 'card', :card_last_four, :amount, 'completed', :transaction_id)";
+                    $query = $dbh->prepare($sql);
+                    $query->bindParam(':aptnumber', $aptnumber, PDO::PARAM_STR);
+                    $query->bindParam(':uid', $uid, PDO::PARAM_INT);
+                    $query->bindParam(':card_last_four', $card_last_four, PDO::PARAM_STR);
+                    $query->bindParam(':amount', $amount, PDO::PARAM_STR);
+                    $query->bindParam(':transaction_id', $transaction_id, PDO::PARAM_STR);
+                    $query->execute();
+                    
+                    // Add payment success message
+                    $payment_message = " Payment of $" . number_format($amount, 2) . " was processed successfully.";
+                }
+
+                echo '<script>alert("Your Appointment has been taken successfully. Appointment number is ' . $aptnumber . '.' . $payment_message . '")</script>';
             } else {
-                // Show error message if something went wrong
                 echo '<script>alert("Something Went Wrong. Please try again")</script>';
             }
         }
     }
 }
 ?>
+
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -231,7 +394,8 @@ if (!isset($_SESSION['odlmsuid']) || strlen($_SESSION['odlmsuid']) == 0) {
                                     <!-- Date of Birth -->
                                     <div class="form-group">
                                         <label for="exampleInputEmail1">Date of Birth</label>
-                                        <input type="date" class="form-control" id="dob" name="dob" required="true">
+                                        <input type="date" class="form-control" id="dob" name="dob" required="true" 
+                                               max="<?php echo date('Y-m-d'); ?>">
                                     </div>
                                     <!-- Mobile Number -->
                                     <div class="form-group">
@@ -242,6 +406,11 @@ if (!isset($_SESSION['odlmsuid']) || strlen($_SESSION['odlmsuid']) == 0) {
                                     <div class="form-group">
                                         <label for="exampleInputEmail1">Email ID</label>
                                         <input type="email" class="form-control" id="email" name="email" required="true">
+                                    </div>
+                                    <!-- Home Address -->
+                                    <div class="form-group">
+                                        <label for="address">Home Address</label>
+                                        <textarea class="form-control" id="address" name="address" rows="3" required="true"></textarea>
                                     </div>
                                     <!-- Appointment Date -->
                                     <div class="form-group">
@@ -274,7 +443,8 @@ if (!isset($_SESSION['odlmsuid']) || strlen($_SESSION['odlmsuid']) == 0) {
                                     <!-- Prescription Upload -->
                                     <div class="form-group">
                                         <label for="exampleInputFile">Prescription (if any)</label>
-                                        <input type="file" id="pres" class="form-control" name="pres">
+                                        <input type="file" id="pres" class="form-control" name="pres" accept=".jpg,.jpeg,.png,.gif,.pdf">
+                                        <small class="text-muted">Accepted formats: JPG, JPEG, PNG, GIF, PDF</small>
                                     </div>
                                     <!-- Test Selection -->
                                     <div class="form-group">
@@ -314,6 +484,39 @@ if (!isset($_SESSION['odlmsuid']) || strlen($_SESSION['odlmsuid']) == 0) {
                                             </tbody>
                                         </table>
                                     </div>
+                                    
+                                    <!-- Payment Method Selection -->
+                                    <div class="form-group">
+                                        <label for="payment_method">Payment Method</label>
+                                        <select class="form-control" id="payment_method" name="payment_method" required>
+                                            <option value="">Select Payment Method</option>
+                                            <option value="card">Credit/Debit Card</option>
+                                        </select>
+                                    </div>
+
+                                    <!-- Credit Card Payment Fields (Initially Hidden) -->
+                                    <div id="card_payment_fields" style="display:none;">
+                                        <div class="form-group">
+                                            <label for="card_number">Card Number</label>
+                                            <input type="text" class="form-control" id="card_number" name="card_number" placeholder="4242 4242 4242 4242" maxlength="16">
+                                        </div>
+                                        <div class="form-group">
+                                            <label for="card_expiry">Expiry Date</label>
+                                            <input type="text" class="form-control" id="card_expiry" name="card_expiry" placeholder="MM/YY" maxlength="5">
+                                        </div>
+                                        <div class="form-group">
+                                            <label for="card_cvc">CVC</label>
+                                            <input type="text" class="form-control" id="card_cvc" name="card_cvc" placeholder="123" maxlength="3">
+                                        </div>
+                                        <div class="form-group">
+                                            <label for="card_name">Name on Card</label>
+                                            <input type="text" class="form-control" id="card_name" name="card_name" placeholder="John Doe">
+                                        </div>
+                                        <div class="alert alert-info">
+                                            <strong>Demo Notice:</strong> This is a test payment system. Use card number 4242424242424242 with any future expiry date and any 3-digit CVC.
+                                        </div>
+                                    </div>
+                                    
                                     <!-- Submit Button -->
                                     <button type="submit" class="btn btn-primary btn-md" name="submit">Submit</button>
                                 </form>
@@ -347,5 +550,7 @@ if (!isset($_SESSION['odlmsuid']) || strlen($_SESSION['odlmsuid']) == 0) {
     
     <!-- Enhanced Appointment Time Selection -->
     <script src="assets/js/appointment-time-selection.js"></script>
+    <!-- Payment Method Toggle Script -->
+    <script src="assets/js/paymentMethodToggle.js"></script>
 </body>
 </html>
