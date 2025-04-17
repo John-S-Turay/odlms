@@ -94,8 +94,11 @@ if (strlen($_SESSION['odlmsaid']) == 0) {
                                     // Get appointment ID from URL
                                     $eid = $_GET['editid'];
                                     
-                                    // Query to get appointment details
-                                    $sql = "SELECT * FROM tblappointment WHERE ID = :eid";
+                                    // Query to get appointment details with prescription data
+                                    $sql = "SELECT a.*, p.id as prescription_id, p.file_name, p.mime_type, p.file_size
+                                            FROM tblappointment a 
+                                            LEFT JOIN tbl_prescriptions p ON a.ID = p.appointment_id 
+                                            WHERE a.ID = :eid";
                                     $query = $dbh->prepare($sql);
                                     $query->bindParam(':eid', $eid, PDO::PARAM_STR);
                                     $query->execute();
@@ -155,6 +158,8 @@ if (strlen($_SESSION['odlmsaid']) == 0) {
                                                 $status = $row->Status;
                                                 if ($row->Status == "Approved") {
                                                     echo "Your Appointment has been approved";
+                                                } elseif ($row->Status == "Report Uploaded") {
+                                                    echo "Your Report has been sent";
                                                 } elseif ($row->Status == "Rejected") {
                                                     echo "Your Appointment has been cancelled";
                                                 } else {
@@ -172,8 +177,15 @@ if (strlen($_SESSION['odlmsaid']) == 0) {
                                             <?php } ?>  
                                             <th>Prescription</th>
                                             <td colspan="3">
-                                                <?php if (!empty($row->Prescription)) { ?>
-                                                    <a href="../user/images/<?php echo $row->Prescription; ?>" target="_blank">Download Prescription</a>
+                                                <?php if (!empty($row->prescription_id)) { ?>
+                                                    <a href="download-prescription.php?id=<?php echo $row->prescription_id; ?>" 
+                                                       target="_blank" 
+                                                       class="btn btn-sm btn-primary">
+                                                       <i class="fa fa-download"></i> Download Prescription
+                                                       <?php if (!empty($row->file_name)): ?>
+                                                           (<?php echo htmlentities($row->file_name); ?>)
+                                                       <?php endif; ?>
+                                                    </a>
                                                 <?php } else {
                                                     echo "NA";
                                                 } ?>
@@ -184,7 +196,6 @@ if (strlen($_SESSION['odlmsaid']) == 0) {
                                     <br>
                                     
                                     <!-- Test Details Section -->
-                                    <h4 style="color: blue">Test Detail</h4>
                                     <?php
                                     $aptid = $_GET['aptid'];            
                                     $sql = "SELECT tbllabtest.TestTitle, tbllabtest.TestDescription, tbllabtest.TestInterpretation, 
