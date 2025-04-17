@@ -103,26 +103,12 @@ if (!isset($_SESSION['odlmsuid']) || strlen($_SESSION['odlmsuid']) == 0) {
             try {
                 $dbh->beginTransaction();
 
-                // Store prescription in database
-                $sql = "INSERT INTO tbl_prescriptions 
-                        (user_id, appointment_id, file_name, file_data, mime_type, file_size)
-                        VALUES (:user_id, :appointment_id, :file_name, :file_data, :mime_type, :file_size)";
-                $query = $dbh->prepare($sql);
-                $query->bindParam(':user_id', $_SESSION['odlmsuid'], PDO::PARAM_INT);
-                $query->bindParam(':appointment_id', $appointmentId, PDO::PARAM_INT);
-                $query->bindParam(':file_name', $fileName, PDO::PARAM_STR);
-                $query->bindParam(':file_data', $fileData, PDO::PARAM_LOB);
-                $query->bindParam(':mime_type', $mimeType, PDO::PARAM_STR);
-                $query->bindParam(':file_size', $fileSize, PDO::PARAM_INT);
-                $query->execute();
-                $prescriptionId = $dbh->lastInsertId();
-
                 // Insert appointment with prescription reference
                 $sql = "INSERT INTO tblappointment 
                         (UserID, AppointmentNumber, PatientName, Gender, DOB, MobileNumber, Email, address, 
-                        AppointmentDate, AppointmentTime, prescription_id, availability_id) 
+                        AppointmentDate, AppointmentTime, availability_id) 
                         VALUES (:uid, :aptnumber, :pname, :gender, :dob, :mobnum, :email, :address, 
-                        :aptdate, :apttime, :prescription_id, :availability_id)";
+                        :aptdate, :apttime, :availability_id)";
                 $query = $dbh->prepare($sql);
                 $query->bindParam(':pname', $pname, PDO::PARAM_STR);
                 $query->bindParam(':gender', $gender, PDO::PARAM_STR);
@@ -134,8 +120,21 @@ if (!isset($_SESSION['odlmsuid']) || strlen($_SESSION['odlmsuid']) == 0) {
                 $query->bindParam(':apttime', $apttime, PDO::PARAM_STR);
                 $query->bindParam(':aptnumber', $aptnumber, PDO::PARAM_STR);
                 $query->bindParam(':uid', $uid, PDO::PARAM_STR);
-                $query->bindParam(':prescription_id', $prescriptionId, PDO::PARAM_INT);
                 $query->bindParam(':availability_id', $slot->id, PDO::PARAM_INT);
+                $query->execute();
+                $appointmentId = $dbh->lastInsertId();
+
+                // Store prescription in database
+                $sql = "INSERT INTO tbl_prescriptions 
+                        (user_id, appointment_id, file_name, file_data, mime_type, file_size)
+                        VALUES (:user_id, :appointment_id, :file_name, :file_data, :mime_type, :file_size)";
+                $query = $dbh->prepare($sql);
+                $query->bindParam(':user_id', $_SESSION['odlmsuid'], PDO::PARAM_INT);
+                $query->bindParam(':appointment_id', $appointmentId, PDO::PARAM_INT);
+                $query->bindParam(':file_name', $fileName, PDO::PARAM_STR);
+                $query->bindParam(':file_data', $fileData, PDO::PARAM_LOB);
+                $query->bindParam(':mime_type', $mimeType, PDO::PARAM_STR);
+                $query->bindParam(':file_size', $fileSize, PDO::PARAM_INT);
                 $query->execute();
                 $LastInsertId = $dbh->lastInsertId();
 
