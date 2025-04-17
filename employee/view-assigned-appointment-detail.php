@@ -123,7 +123,6 @@ if (strlen($_SESSION['odlmseid']) == 0) {
                                             <th>Email</th>
                                             <td><?php echo $row->Email; ?></td>
                                         </tr>
-                                        <!-- NEW: Home Address Row -->
                                         <tr>
                                             <th>Home Address</th>
                                             <td><?php echo !empty($row->address) ? $row->address : 'Not provided'; ?></td>
@@ -162,8 +161,6 @@ if (strlen($_SESSION['odlmseid']) == 0) {
                                             <?php } else { ?>
                                                 <td><?php echo $row->Remark; ?></td>
                                             <?php } ?>
-                                            <th>Prescription</th>
-                                            <td colspan="3"><a href="../user/images/<?php echo $row->Prescription; ?>" target="_blank">Download Prescription</a></td>
                                         </tr>
                                     <?php $cnt = $cnt + 1; } } ?>
                                     </table> 
