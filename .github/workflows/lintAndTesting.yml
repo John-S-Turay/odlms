@@ -28,10 +28,10 @@ jobs:
 
       - name: Run phpcbf to auto-fix only .php files
         run: |
-          phpcbf -d memory_limit=1G --standard=PSR12 \
-          --ignore=vendor/*,js/*,css/*,fonts/*,images/*,admin/assets/*,user/assets/*,employee/assets/* --extensions=php .
+            phpcs -d memory_limit=2G --standard=PSR12 \
+            --ignore=vendor/*,js/*,css/*,fonts/*,images/*,admin/assets/*,user/assets/*,employee/assets/* --extensions=php . | tee phpcs.log
 
       - name: Run phpcs
         run: |
           phpcs -d memory_limit=1G --standard=PSR12 \
-          --ignore=vendor/*,js/*,css/*,fonts/*,images/*,admin/assets/*,user/assets/*,employee/assets/* --extensions=php .
+          --ignore=vendor/*,js/*,css/*,fonts/*,images/*,admin/assets/*,user/assets/*,employee/assets/* --extensions=php . | tee phpcs.log
