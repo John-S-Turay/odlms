@@ -26,5 +26,5 @@ jobs:
         run: |
           git fetch origin
           git checkout main
-          git merge origin/staging --no-ff -m "Auto-merged staging into main"
+          git merge origin/staging --allow-unrelated-histories --no-ff -m "Auto-merged staging into main"
           git push origin main
