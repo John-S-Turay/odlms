@@ -26,7 +26,7 @@ jobs:
       - name: Add composer bin to path
         run: echo "$HOME/.composer/vendor/bin" >> $GITHUB_PATH
 
-      - name: RRun phpcbf to auto-fix only .php files
+      - name: Run phpcbf to auto-fix only .php files
         run: |
           phpcbf -d memory_limit=1G --standard=PSR12 \
           --ignore=vendor/*,js/*,css/*,fonts/*,images/*,admin/assets/*,user/assets/*,employee/assets/* --extensions=php .
