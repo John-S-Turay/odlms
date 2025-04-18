@@ -1,0 +1,30 @@
+name: Auto Merge Staging to Main
+
+on:
+  push:
+    branches:
+      - staging
+
+jobs:
+  merge:
+    runs-on: ubuntu-latest
+    if: github.ref == 'refs/heads/staging'
+    permissions:
+      contents: write
+      pull-requests: write
+
+    steps:
+      - name: Checkout repo
+        uses: actions/checkout@v4
+
+      - name: Setup Git user
+        run: |
+          git config --global user.name 'github-actions[bot]'
+          git config --global user.email 'github-actions[bot]@users.noreply.github.com'
+
+      - name: Merge staging into main
+        run: |
+          git fetch origin
+          git checkout main
+          git merge origin/staging --no-ff -m "Auto-merged staging into main"
+          git push origin main
