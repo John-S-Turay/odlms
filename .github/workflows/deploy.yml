@@ -21,3 +21,15 @@ jobs:
         username: ${{ secrets.FTP_USERNAME }}
         password: ${{ secrets.FTP_PASSWORD }}
         server-dir: ${{ secrets.FTP_TARGET }}/
+          exclude: |
+            **/.git*
+            **/.github*
+            **/README.md
+            **/SQL
+            **/.env
+            **/tests/**
+            **/composer.json
+            **/composer.lock
+            admin/includes/dbconnection.php
+            user/includes/dbconnection.php
+            employee/includes/dbconnection.php
