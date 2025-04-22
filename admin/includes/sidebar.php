@@ -121,7 +121,8 @@ foreach($results as $row)
           <ul class="submenu">
             <li><a href="sample-received.php"><span class="menu-text">Sample Received</span></a></li>
             <li><a href="uploaded-reports.php"><span class="menu-text">Uploaded Reports </span></a></li>
-           
+            <li><a href="view-reports.php"><span class="menu-text">View Reports </span></a></li>
+            <li><a href="save-report.php"><span class="menu-text">Submit Reports </span></a></li>
           </ul>
         </li>
 <li>
