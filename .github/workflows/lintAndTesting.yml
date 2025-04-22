@@ -2,9 +2,9 @@ name: Lint & Test PHP (Staging)
 
 on:
   push:
-    branches: [ staging ]
+    branches: [ main ]
   pull_request:
-    branches: [ staging ]
+    branches: [ main ]
 
 jobs:
   lint-and-test:
