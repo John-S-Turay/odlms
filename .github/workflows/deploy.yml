@@ -28,8 +28,6 @@ jobs:
             **/SQL
             **/.env
             **/tests/**
-            **/composer.json
-            **/composer.lock
             admin/includes/dbconnection.php
             user/includes/dbconnection.php
             employee/includes/dbconnection.php
