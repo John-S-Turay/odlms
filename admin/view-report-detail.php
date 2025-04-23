@@ -21,8 +21,26 @@ $imaging = [];
 try {
     // Main report data with patient and clinic info
     $stmt = $dbh->prepare("
-        SELECT r.*, p.*, c.*, a.AdminName AS doctor_name, 
-               a.Email AS doctor_email, a.MobileNumber AS doctor_phone
+        SELECT 
+            r.*,
+            -- Patient fields
+            p.patient_id,
+            p.full_name AS patient_name,
+            p.date_of_birth,
+            p.gender,
+            p.address AS patient_address,
+            p.phone AS patient_phone,
+            p.email AS patient_email,
+            -- Clinic fields
+            c.clinic_id,
+            c.name AS clinic_name,
+            c.address AS clinic_address,
+            c.phone AS clinic_phone,
+            c.email AS clinic_email,
+            -- Doctor fields
+            a.AdminName AS doctor_name, 
+            a.Email AS doctor_email, 
+            a.MobileNumber AS doctor_phone
         FROM lab_reports r
         JOIN patients p ON r.patient_id = p.patient_id
         JOIN clinics c ON r.clinic_id = c.clinic_id
@@ -195,7 +213,7 @@ function getOrganStatus($observation) {
                             <div class="row">
                                 <div class="col-md-6">
                                     <p><strong><i class="zmdi zmdi-account"></i> Patient Name:</strong> 
-                                       <span class="pull-right"><?= htmlspecialchars($report['full_name']) ?></span>
+                                       <span class="pull-right"><?= htmlspecialchars($report['patient_name']) ?></span>
                                     </p>
                                     <p><strong><i class="zmdi zmdi-pin"></i> Appointment Number:</strong> 
                                        <span class="pull-right"><?= htmlspecialchars($report['appointment_number'] ?? 'N/A') ?></span>
@@ -204,10 +222,10 @@ function getOrganStatus($observation) {
                                        <span class="pull-right"><?= $age ?> years</span>
                                     </p>
                                     <p><strong><i class="zmdi zmdi-phone"></i> Phone Number:</strong> 
-                                       <span class="pull-right"><?= htmlspecialchars($report['phone']) ?></span>
+                                       <span class="pull-right"><?= htmlspecialchars($report['patient_phone']) ?></span>
                                     </p>
                                     <p><strong><i class="zmdi zmdi-email"></i> Email:</strong> 
-                                       <span class="pull-right"><?= htmlspecialchars($report['email']) ?></span>
+                                       <span class="pull-right"><?= htmlspecialchars($report['patient_email']) ?></span>
                                     </p>
                                 </div>
                                 <div class="col-md-6">
@@ -215,10 +233,10 @@ function getOrganStatus($observation) {
                                        <span class="pull-right"><?= htmlspecialchars($report['gender']) ?></span>
                                     </p>
                                     <p><strong><i class="zmdi zmdi-pin"></i> Address:</strong> 
-                                       <span class="pull-right"><?= htmlspecialchars($report['address']) ?></span>
+                                       <span class="pull-right"><?= htmlspecialchars($report['patient_address']) ?></span>
                                     </p>
                                     <p><strong><i class="zmdi zmdi-hospital"></i> Clinic:</strong> 
-                                       <span class="pull-right"><?= htmlspecialchars($report['name']) ?></span>
+                                       <span class="pull-right"><?= htmlspecialchars($report['clinic_name']) ?></span>
                                     </p>
                                     <p><strong><i class="zmdi zmdi-time"></i> Report Date:</strong> 
                                        <span class="pull-right"><?= date('d M Y', strtotime($report['report_date'])) ?></span>
@@ -520,9 +538,9 @@ function getOrganStatus($observation) {
                         </div>
 
                         <div class="clinic-info text-center">
-                            <h4><i class="zmdi zmdi-hospital"></i> <?= htmlspecialchars($report['name']) ?></h4>
-                            <p><i class="zmdi zmdi-pin"></i> <?= htmlspecialchars($report['address']) ?></p>
-                            <p><i class="zmdi zmdi-phone"></i> <?= htmlspecialchars($report['phone']) ?> | <i class="zmdi zmdi-email"></i> <?= htmlspecialchars($report['email']) ?></p>
+                            <h4><i class="zmdi zmdi-hospital"></i> <?= htmlspecialchars($report['clinic_name']) ?></h4>
+                            <p><i class="zmdi zmdi-pin"></i> <?= htmlspecialchars($report['clinic_address']) ?></p>
+                            <p><i class="zmdi zmdi-phone"></i> <?= htmlspecialchars($report['clinic_phone']) ?> | <i class="zmdi zmdi-email"></i> <?= htmlspecialchars($report['clinic_email']) ?></p>
                             <p class="text-muted">Report generated on: <?= date('F j, Y \a\t H:i', strtotime($report['report_date'])) ?></p>
                         </div>
                     </div>

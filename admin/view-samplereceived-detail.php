@@ -164,8 +164,13 @@ if (strlen($_SESSION['odlmsaid']==0)) {
                                     <?php } else { ?>
                                         <td><?php echo htmlentities($row->AssignTo);?></td>
                                     <?php } ?>
-                                    <th>Date of Birth</th>
-                                    <td><?php echo $row->DOB;?></td>
+                                    <th>Prescription</th>
+                                    <td>
+                                        <?php if($row->Prescription) { ?>
+                                            <a href="../user/images/<?php echo $row->Prescription;?>" target="_blank">Download Prescription</a>
+                                        <?php } else { ?>
+                                            No Prescription
+                                        <?php } ?>
                                 </tr>
                                 <tr>
                                     <th>Apply Date</th>
@@ -185,14 +190,6 @@ if (strlen($_SESSION['odlmsaid']==0)) {
                                     </td>
                                 </tr>
                                 <tr>
-                                    <th>Prescription</th>
-                                    <td>
-                                        <?php if($row->Prescription) { ?>
-                                            <a href="../user/images/<?php echo $row->Prescription;?>" target="_blank">Download Prescription</a>
-                                        <?php } else { ?>
-                                            No Prescription
-                                        <?php } ?>
-                                    </td>
                                     <th>Report Status</th>
                                     <td>
                                         <?php if($row->Status == "Report Uploaded" && $row->report_id) { ?>

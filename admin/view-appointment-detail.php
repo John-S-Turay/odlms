@@ -132,12 +132,14 @@ if (strlen($_SESSION['odlmsaid']) == 0) {
                                         <tr>
                                             <th>Home Address</th>
                                             <td><?php echo !empty($row->address) ? $row->address : 'Not provided'; ?></td>
+                                            <th>Appointment Time</th>
+                                            <td><?php echo $row->AppointmentTime; ?></td>
                                         </tr>
                                         <tr>
                                             <th>Appointment Date</th>
                                             <td><?php echo $row->AppointmentDate; ?></td>
-                                            <th>Appointment Time</th>
-                                            <td><?php echo $row->AppointmentTime; ?></td>
+                                            <th>Apply Date</th>
+                                            <td><?php echo $row->PostDate; ?></td>
                                         </tr>
                                         <tr>
                                             <th>Assign To</th>
@@ -145,9 +147,23 @@ if (strlen($_SESSION['odlmsaid']) == 0) {
                                                 <td><?php echo "Not Updated Yet"; ?></td>
                                             <?php } else { ?>
                                                 <td><?php echo htmlentities($row->AssignTo); ?></td>
-                                            <?php } ?>       
-                                            <th>Date of Birth</th>
-                                            <td><?php echo $row->DOB; ?></td>
+                                            <?php } ?>  
+                                            
+                                            <th>Prescription</th>
+                                            <td colspan="3">
+                                                <?php if (!empty($row->prescription_id)) { ?>
+                                                    <a href="download-prescription.php?id=<?php echo $row->prescription_id; ?>" 
+                                                       target="_blank" 
+                                                       class="btn btn-sm btn-primary">
+                                                       <i class="fa fa-download"></i> Download Prescription
+                                                       <?php if (!empty($row->file_name)): ?>
+                                                           (<?php echo htmlentities($row->file_name); ?>)
+                                                       <?php endif; ?>
+                                                    </a>
+                                                <?php } else {
+                                                    echo "NA";
+                                                } ?>
+                                            </td>
                                         </tr>
                                         <tr>
                                             <th>Apply Date</th>
@@ -175,21 +191,7 @@ if (strlen($_SESSION['odlmsaid']) == 0) {
                                             <?php } else { ?>
                                                 <td><?php echo htmlentities($row->Status); ?></td>
                                             <?php } ?>  
-                                            <th>Prescription</th>
-                                            <td colspan="3">
-                                                <?php if (!empty($row->prescription_id)) { ?>
-                                                    <a href="download-prescription.php?id=<?php echo $row->prescription_id; ?>" 
-                                                       target="_blank" 
-                                                       class="btn btn-sm btn-primary">
-                                                       <i class="fa fa-download"></i> Download Prescription
-                                                       <?php if (!empty($row->file_name)): ?>
-                                                           (<?php echo htmlentities($row->file_name); ?>)
-                                                       <?php endif; ?>
-                                                    </a>
-                                                <?php } else {
-                                                    echo "NA";
-                                                } ?>
-                                            </td>
+                                            
                                         </tr>
                                     <?php $cnt = $cnt + 1; } } ?>
                                     </table> 

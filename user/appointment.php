@@ -432,14 +432,6 @@ if (!isset($_SESSION['odlmsuid']) || strlen($_SESSION['odlmsuid']) == 0) {
                                             ?>
                                         </select>
                                     </div>
-                                    <!-- Appointment Time -->
-                                    <div class="form-group">
-                                        <label for="apttime">Available Time Slots</label>
-                                        <select class="form-control" id="apttime" name="apttime" required disabled>
-                                            <option value="">Select Date first</option>
-                                        </select>
-                                        <div id="slot-details" class="mt-2 small text-muted"></div>
-                                    </div>
                                     <!-- Prescription Upload -->
                                     <div class="form-group">
                                         <label for="exampleInputFile">Prescription (if any)</label>
@@ -484,7 +476,14 @@ if (!isset($_SESSION['odlmsuid']) || strlen($_SESSION['odlmsuid']) == 0) {
                                             </tbody>
                                         </table>
                                     </div>
-                                    
+                                     <!-- Appointment Time -->
+                                     <div class="form-group">
+                                        <label for="apttime">Available Time Slots</label>
+                                        <select class="form-control" id="apttime" name="apttime" required disabled>
+                                            <option value="">Select Date first</option>
+                                        </select>
+                                        <div id="slot-details" class="mt-2 small text-muted"></div>
+                                    </div>
                                     <!-- Payment Method Selection -->
                                     <div class="form-group">
                                         <label for="payment_method">Payment Method</label>
