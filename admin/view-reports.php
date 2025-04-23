@@ -62,7 +62,7 @@ if (strlen($_SESSION['odlmsaid'])==0) {
                             
                                 <tbody>
                   <?php
-$sql="SELECT r.*, p.first_name, p.last_name 
+$sql="SELECT r.*, p.full_name
       FROM lab_reports r
       JOIN patients p ON r.patient_id = p.patient_id
       WHERE r.doctor_id = :doctor_id
@@ -79,7 +79,7 @@ if($query->rowCount() > 0) {
                                     <tr>
                                         <td><?php echo htmlentities($cnt);?></td>
                                         <td><?php echo htmlentities($row->report_number);?></td>
-                                        <td><?php echo htmlentities($row->first_name.' '.$row->last_name);?></td>
+                                        <td><?php echo htmlentities($row->full_name);?></td>
                                         <td><?php echo htmlentities(date("d/m/Y", strtotime($row->collection_date)));?></td>
                                         <td><?php echo htmlentities(date("d/m/Y", strtotime($row->report_date)));?></td>
                                         <td><?php echo htmlentities($row->status);?></td>                

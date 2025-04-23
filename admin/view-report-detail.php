@@ -195,7 +195,7 @@ function getOrganStatus($observation) {
                             <div class="row">
                                 <div class="col-md-6">
                                     <p><strong><i class="zmdi zmdi-account"></i> Patient Name:</strong> 
-                                       <span class="pull-right"><?= htmlspecialchars($report['first_name'] . ' ' . $report['last_name']) ?></span>
+                                       <span class="pull-right"><?= htmlspecialchars($report['full_name']) ?></span>
                                     </p>
                                     <p><strong><i class="zmdi zmdi-pin"></i> Appointment Number:</strong> 
                                        <span class="pull-right"><?= htmlspecialchars($report['appointment_number'] ?? 'N/A') ?></span>

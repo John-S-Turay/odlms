@@ -13,6 +13,34 @@ if (!isset($_SESSION['odlmsaid']) || empty($_SESSION['odlmsaid'])) {
     exit();
 }
 
+// Getting patient data
+$patientData = [];
+if (isset($_GET['appointment_id']) && !empty($_GET['appointment_id'])) {
+    $appointmentId = intval($_GET['appointment_id']);
+    $query = "SELECT * FROM tblappointment WHERE ID = ?";
+    $stmt = $dbh->prepare($query);
+    $stmt->execute([$appointmentId]);
+    $patientData = $stmt->fetch(PDO::FETCH_ASSOC);
+    
+    // Also check if patient already exists
+    if (!empty($patientData['MobileNumber'])) {
+        $checkPatient = $dbh->prepare("SELECT * FROM patients WHERE phone = ?");
+        $checkPatient->execute([$patientData['MobileNumber']]);
+        $existingPatient = $checkPatient->fetch(PDO::FETCH_ASSOC);
+        if ($existingPatient) {
+            $patientData = array_merge($patientData, $existingPatient);
+            $patientData['patient_exists'] = true;
+        }
+    }
+}
+
+// Fetch clinic data
+$clinicData = [];
+$clinicQuery = "SELECT * FROM clinics LIMIT 1";
+$clinicStmt = $dbh->prepare($clinicQuery);
+$clinicStmt->execute();
+$clinicData = $clinicStmt->fetch(PDO::FETCH_ASSOC);
+
 // Function to generate unique report number
 function generateReportNumber() {
     return 'LAB-' . date('Ymd') . '-' . strtoupper(substr(uniqid(), -6));
@@ -35,9 +63,13 @@ function validateEmail($email) {
 
 // Function to validate date not in future
 function validateDateNotFuture($date) {
-    $inputDate = new DateTime($date);
-    $currentDate = new DateTime();
-    return $inputDate <= $currentDate;
+    try {
+        $inputDate = new DateTime($date);
+        $currentDate = new DateTime();
+        return $inputDate <= $currentDate;
+    } catch (Exception $e) {
+        return false;
+    }
 }
 
 // Process form submission
@@ -47,7 +79,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     try {
         // Validate required fields
         $requiredFields = [
-            'patient_first_name', 'patient_last_name', 'patient_dob',
+            'patient_full_name', 'patient_dob',
             'patient_gender', 'patient_phone', 'clinic_name',
             'clinic_phone', 'clinic_address', 'collection_date'
         ];
@@ -100,49 +132,79 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         // Begin transaction
         $dbh->beginTransaction();
 
-        // 1. Save Patient Information
-        $patientStmt = $dbh->prepare("
-            INSERT INTO patients (
-                first_name, last_name, date_of_birth, gender, 
-                address, phone, email
-            ) VALUES (?, ?, ?, ?, ?, ?, ?)
-        ");
-        
-        $patientStmt->execute([
-            sanitizeInput($_POST['patient_first_name']),
-            sanitizeInput($_POST['patient_last_name']),
-            $_POST['patient_dob'],
-            $_POST['patient_gender'],
-            sanitizeInput($_POST['patient_address']),
-            sanitizeInput($_POST['patient_phone']),
-            !empty($_POST['patient_email']) ? filter_var($_POST['patient_email'], FILTER_SANITIZE_EMAIL) : null
-        ]);
-        
-        $patientId = $dbh->lastInsertId();
+        // 1. Handle patient data
+        if (!empty($patientData['patient_exists'])) {
+            // Update existing patient
+            $patientStmt = $dbh->prepare("
+                UPDATE patients SET
+                    full_name = ?,
+                    date_of_birth = ?,
+                    gender = ?,
+                    address = ?,
+                    phone = ?,
+                    email = ?,
+                    updated_at = CURRENT_TIMESTAMP()
+                WHERE patient_id = ?
+            ");
+            
+            $patientStmt->execute([
+                sanitizeInput($_POST['patient_full_name']),
+                $_POST['patient_dob'],
+                $_POST['patient_gender'],
+                sanitizeInput($_POST['patient_address']),
+                sanitizeInput($_POST['patient_phone']),
+                !empty($_POST['patient_email']) ? filter_var($_POST['patient_email'], FILTER_SANITIZE_EMAIL) : null,
+                $patientData['patient_id']
+            ]);
+            
+            $patientId = $patientData['patient_id'];
+        } else {
+            // Insert new patient
+            $patientStmt = $dbh->prepare("
+                INSERT INTO patients (
+                    full_name, date_of_birth, gender, 
+                    address, phone, email, created_at
+                ) VALUES (?, ?, ?, ?, ?, ?, CURRENT_TIMESTAMP())
+            ");
+            
+            $patientStmt->execute([
+                sanitizeInput($_POST['patient_full_name']),
+                $_POST['patient_dob'],
+                $_POST['patient_gender'],
+                sanitizeInput($_POST['patient_address']),
+                sanitizeInput($_POST['patient_phone']),
+                !empty($_POST['patient_email']) ? filter_var($_POST['patient_email'], FILTER_SANITIZE_EMAIL) : null
+            ]);
+            
+            $patientId = $dbh->lastInsertId();
+        }
 
         // 2. Save Clinic Information
-        $clinicStmt = $dbh->prepare("
-            INSERT INTO clinics (
-                name, address, phone, email
-            ) VALUES (?, ?, ?, ?)
-        ");
-        
-        $clinicStmt->execute([
-            sanitizeInput($_POST['clinic_name']),
-            sanitizeInput($_POST['clinic_address']),
-            sanitizeInput($_POST['clinic_phone']),
-            !empty($_POST['clinic_email']) ? filter_var($_POST['clinic_email'], FILTER_SANITIZE_EMAIL) : null
-        ]);
-        
-        $clinicId = $dbh->lastInsertId();
+        if (!empty($clinicData['clinic_id'])) {
+            $clinicId = $clinicData['clinic_id'];
+        } else {
+            // Fallback - create clinic if somehow missing (shouldn't happen)
+            $clinicStmt = $dbh->prepare("
+                INSERT INTO clinics (name, address, phone, email) 
+                VALUES (?, ?, ?, ?)
+            ");
+            $clinicStmt->execute([
+                $_POST['clinic_name'],
+                $_POST['clinic_address'],
+                $_POST['clinic_phone'],
+                !empty($_POST['clinic_email']) ? $_POST['clinic_email'] : null
+            ]);
+            $clinicId = $dbh->lastInsertId();
+        }
 
         // 3. Save Lab Report
         $reportStmt = $dbh->prepare("
             INSERT INTO lab_reports (
                 patient_id, doctor_id, clinic_id, report_number,
                 collection_date, report_date, existing_conditions,
-                suspected_conditions, general_impression, notes, status
-            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                suspected_conditions, general_impression, notes, status,
+                created_at
+            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, CURRENT_TIMESTAMP())
         ");
         
         $reportNumber = generateReportNumber();
@@ -164,7 +226,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         
         $reportId = $dbh->lastInsertId();
 
-        // 4. Save Blood Test Results (only if at least one value is provided)
+        // 4. Save Blood Test Results
         $bloodTestValues = [
             'wbc', 'rbc', 'hemoglobin', 'hematocrit', 'platelets',
             'glucose', 'sodium', 'potassium', 'chloride', 'ast', 'alt',
@@ -184,33 +246,34 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 INSERT INTO blood_tests (
                     report_id, test_type, wbc, rbc, hemoglobin, hematocrit,
                     platelets, glucose, sodium, potassium, chloride, ast, alt,
-                    bun, creatinine, total_cholesterol, hdl, ldl, triglycerides
-                ) VALUES (?, 'CBC', ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                    bun, creatinine, total_cholesterol, hdl, ldl, triglycerides,
+                    created_at
+                ) VALUES (?, 'CBC', ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, CURRENT_TIMESTAMP())
             ");
             
             $bloodTestStmt->execute([
                 $reportId,
-                !empty($_POST['wbc']) ? $_POST['wbc'] : null,
-                !empty($_POST['rbc']) ? $_POST['rbc'] : null,
-                !empty($_POST['hemoglobin']) ? $_POST['hemoglobin'] : null,
-                !empty($_POST['hematocrit']) ? $_POST['hematocrit'] : null,
-                !empty($_POST['platelets']) ? $_POST['platelets'] : null,
-                !empty($_POST['glucose']) ? $_POST['glucose'] : null,
-                !empty($_POST['sodium']) ? $_POST['sodium'] : null,
-                !empty($_POST['potassium']) ? $_POST['potassium'] : null,
-                !empty($_POST['chloride']) ? $_POST['chloride'] : null,
-                !empty($_POST['ast']) ? $_POST['ast'] : null,
-                !empty($_POST['alt']) ? $_POST['alt'] : null,
-                !empty($_POST['bun']) ? $_POST['bun'] : null,
-                !empty($_POST['creatinine']) ? $_POST['creatinine'] : null,
-                !empty($_POST['total_cholesterol']) ? $_POST['total_cholesterol'] : null,
-                !empty($_POST['hdl']) ? $_POST['hdl'] : null,
-                !empty($_POST['ldl']) ? $_POST['ldl'] : null,
-                !empty($_POST['triglycerides']) ? $_POST['triglycerides'] : null
+                !empty($_POST['wbc']) ? floatval($_POST['wbc']) : null,
+                !empty($_POST['rbc']) ? floatval($_POST['rbc']) : null,
+                !empty($_POST['hemoglobin']) ? floatval($_POST['hemoglobin']) : null,
+                !empty($_POST['hematocrit']) ? floatval($_POST['hematocrit']) : null,
+                !empty($_POST['platelets']) ? floatval($_POST['platelets']) : null,
+                !empty($_POST['glucose']) ? floatval($_POST['glucose']) : null,
+                !empty($_POST['sodium']) ? floatval($_POST['sodium']) : null,
+                !empty($_POST['potassium']) ? floatval($_POST['potassium']) : null,
+                !empty($_POST['chloride']) ? floatval($_POST['chloride']) : null,
+                !empty($_POST['ast']) ? floatval($_POST['ast']) : null,
+                !empty($_POST['alt']) ? floatval($_POST['alt']) : null,
+                !empty($_POST['bun']) ? floatval($_POST['bun']) : null,
+                !empty($_POST['creatinine']) ? floatval($_POST['creatinine']) : null,
+                !empty($_POST['total_cholesterol']) ? floatval($_POST['total_cholesterol']) : null,
+                !empty($_POST['hdl']) ? floatval($_POST['hdl']) : null,
+                !empty($_POST['ldl']) ? floatval($_POST['ldl']) : null,
+                !empty($_POST['triglycerides']) ? floatval($_POST['triglycerides']) : null
             ]);
         }
 
-        // 5. Save Imaging Results (only if at least one value is provided)
+        // 5. Save Imaging Results
         $imagingFields = [
             'liver', 'gallbladder', 'spleen', 'kidneys', 'bladder',
             'stomach', 'intestinal_loops', 'adrenals', 'others'
@@ -228,8 +291,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $imagingStmt = $dbh->prepare("
                 INSERT INTO imaging_results (
                     report_id, imaging_type, liver, gallbladder, spleen,
-                    kidneys, bladder, stomach, intestinal_loops, adrenals, others
-                ) VALUES (?, 'Ultrasound', ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                    kidneys, bladder, stomach, intestinal_loops, adrenals, others,
+                    created_at
+                ) VALUES (?, 'Ultrasound', ?, ?, ?, ?, ?, ?, ?, ?, ?, CURRENT_TIMESTAMP())
             ");
             
             $imagingStmt->execute([
@@ -284,8 +348,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     exit();
 }
 
-// If not a POST request, show the form
 ?>
+
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -408,79 +472,80 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                             <h3 class="section-title"><i class="zmdi zmdi-account"></i> Patient Information</h3>
                             <div class="patient-info-card">
                                 <div class="row g-3">
-                                    <div class="col-md-6">
-                                        <label for="patient_first_name" class="form-label required-field">First Name</label>
-                                        <input type="text" class="form-control" id="patient_first_name" name="patient_first_name" required>
-                                        <div class="invalid-feedback">Please provide the patient's first name</div>
-                                    </div>
-                                    <div class="col-md-6">
-                                        <label for="patient_last_name" class="form-label required-field">Last Name</label>
-                                        <input type="text" class="form-control" id="patient_last_name" name="patient_last_name" required>
-                                        <div class="invalid-feedback">Please provide the patient's last name</div>
+                                    <div class="col-12">
+                                        <label for="patient_full_name" class="form-label required-field">Full Name</label>
+                                        <input type="text" class="form-control" id="patient_full_name" name="patient_full_name" 
+                                            value="<?= !empty($patientData['PatientName']) ? htmlspecialchars($patientData['PatientName']) : '' ?>" required readonly>
+                                        <div class="invalid-feedback">Please provide the patient's full name</div>
                                     </div>
                                     <div class="col-md-4">
                                         <label for="patient_dob" class="form-label required-field">Date of Birth</label>
-                                        <input type="date" class="form-control" id="patient_dob" name="patient_dob" required>
+                                        <input type="date" class="form-control" id="patient_dob" name="patient_dob" 
+                                            value="<?= !empty($patientData['DOB']) ? htmlspecialchars($patientData['DOB']) : '' ?>" required readonly>
                                         <div class="invalid-feedback">Please select the patient's date of birth</div>
                                     </div>
                                     <div class="col-md-4">
                                         <label for="patient_gender" class="form-label required-field">Gender</label>
                                         <select class="form-select" id="patient_gender" name="patient_gender" required>
                                             <option value="">Select...</option>
-                                            <option value="Male">Male</option>
-                                            <option value="Female">Female</option>
-                                            <option value="Other">Other</option>
+                                            <option value="Male" <?= (!empty($patientData['Gender']) && $patientData['Gender'] == 'Male') ? 'selected' : '' ?>>Male</option>
+                                            <option value="Female" <?= (!empty($patientData['Gender']) && $patientData['Gender'] == 'Female') ? 'selected' : '' ?>>Female</option>
+                                            <option value="Other" <?= (!empty($patientData['Gender']) && $patientData['Gender'] == 'Other') ? 'selected' : '' ?>>Other</option>
                                         </select>
                                         <div class="invalid-feedback">Please select the patient's gender</div>
                                     </div>
                                     <div class="col-md-4">
                                         <label for="patient_phone" class="form-label required-field">Phone</label>
                                         <input type="tel" class="form-control" id="patient_phone" name="patient_phone" 
-                                               pattern="[\d\s\-\(\)]{8,20}" required>
+                                            value="<?= !empty($patientData['MobileNumber']) ? htmlspecialchars($patientData['MobileNumber']) : '' ?>"
+                                            pattern="[\d\s\-\(\)]{8,20}" required readonly>
                                         <div class="invalid-feedback">Please provide a valid phone number (8-20 digits)</div>
                                     </div>
                                     <div class="col-md-8">
                                         <label for="patient_address" class="form-label">Address</label>
-                                        <input type="text" class="form-control" id="patient_address" name="patient_address">
+                                        <input type="text" class="form-control" id="patient_address" name="patient_address"
+                                            value="<?= !empty($patientData['address']) ? htmlspecialchars($patientData['address']) : '' ?>" readonly>
                                     </div>
                                     <div class="col-md-4">
                                         <label for="patient_email" class="form-label">Email</label>
                                         <input type="email" class="form-control" id="patient_email" name="patient_email"
-                                               pattern="[^@\s]+@[^@\s]+\.[^@\s]+">
+                                            value="<?= !empty($patientData['Email']) ? htmlspecialchars($patientData['Email']) : '' ?>"
+                                            pattern="[^@\s]+@[^@\s]+\.[^@\s]+" readonly>
                                         <div class="invalid-feedback">Please provide a valid email address</div>
                                     </div>
                                 </div>
                             </div>
 
-                            <!-- Clinic Information -->
+                           <!-- Clinic Information -->
                             <h3 class="section-title"><i class="zmdi zmdi-hospital"></i> Clinic Information</h3>
                             <div class="patient-info-card">
                                 <div class="row g-3">
                                     <div class="col-md-6">
                                         <label for="clinic_name" class="form-label required-field">Clinic Name</label>
-                                        <input type="text" class="form-control" id="clinic_name" name="clinic_name" required>
-                                        <div class="invalid-feedback">Please provide the clinic name</div>
+                                        <input type="text" class="form-control" id="clinic_name" name="clinic_name" 
+                                            value="<?= !empty($clinicData['name']) ? htmlspecialchars($clinicData['name']) : 'Our Clinic' ?>" 
+                                            required readonly>
                                     </div>
                                     <div class="col-md-6">
                                         <label for="clinic_phone" class="form-label required-field">Phone</label>
                                         <input type="tel" class="form-control" id="clinic_phone" name="clinic_phone"
-                                               pattern="[\d\s\-\(\)]{8,20}" required>
-                                        <div class="invalid-feedback">Please provide a valid phone number (8-20 digits)</div>
+                                            value="<?= !empty($clinicData['phone']) ? htmlspecialchars($clinicData['phone']) : '+1234567890' ?>"
+                                            pattern="[\d\s\-\(\)]{8,20}" required readonly>
                                     </div>
                                     <div class="col-12">
                                         <label for="clinic_address" class="form-label required-field">Address</label>
-                                        <input type="text" class="form-control" id="clinic_address" name="clinic_address" required>
-                                        <div class="invalid-feedback">Please provide the clinic address</div>
+                                        <input type="text" class="form-control" id="clinic_address" name="clinic_address" 
+                                            value="<?= !empty($clinicData['address']) ? htmlspecialchars($clinicData['address']) : '123 Main Street, City' ?>" 
+                                            required readonly>
                                     </div>
                                     <div class="col-md-6">
                                         <label for="clinic_email" class="form-label">Email</label>
                                         <input type="email" class="form-control" id="clinic_email" name="clinic_email"
-                                               pattern="[^@\s]+@[^@\s]+\.[^@\s]+">
-                                        <div class="invalid-feedback">Please provide a valid email address</div>
+                                            value="<?= !empty($clinicData['email']) ? htmlspecialchars($clinicData['email']) : 'contact@ourclinic.com' ?>"
+                                            pattern="[^@\s]+@[^@\s]+\.[^@\s]+" readonly>
                                     </div>
                                 </div>
                             </div>
-
                             <!-- Report Information -->
                             <h3 class="section-title"><i class="zmdi zmdi-assignment"></i> Report Information</h3>
                             <div class="patient-info-card">
@@ -703,6 +768,26 @@ $(document).ready(function() {
     // Set current date as report date
     $('#report_date').val(new Date().toISOString().substr(0, 10));
     
+    // Show patient data notification if available
+    <?php if (!empty($patientData)): ?>
+        Swal.fire({
+            icon: 'info',
+            title: 'Patient Data Loaded',
+            text: 'Patient information has been pre-filled from the appointment record',
+            timer: 3000,
+            showConfirmButton: false
+        });
+        
+        <?php if (!empty($patientData['patient_exists'])): ?>
+            Swal.fire({
+                icon: 'info',
+                title: 'Existing Patient',
+                text: 'This patient already exists in our database. The form will update their record.',
+                timer: 4000
+            });
+        <?php endif; ?>
+    <?php endif; ?>
+
     // Validate form on submit
     $('#labReportForm').submit(function(e) {
         e.preventDefault();
@@ -714,7 +799,7 @@ $(document).ready(function() {
         // Validate required fields
         let isValid = true;
         const requiredFields = [
-            'patient_first_name', 'patient_last_name', 'patient_dob',
+            'patient_full_name', 'patient_dob',
             'patient_gender', 'patient_phone', 'clinic_name',
             'clinic_phone', 'clinic_address', 'collection_date'
         ];
@@ -783,7 +868,7 @@ $(document).ready(function() {
         
         // Submit form via AJAX
         $.ajax({
-            url: '<?php echo $_SERVER['PHP_SELF']; ?>',
+            url: 'save-report.php',
             type: 'POST',
             data: $(this).serialize(),
             dataType: 'json',
@@ -796,8 +881,7 @@ $(document).ready(function() {
                         confirmButtonText: 'OK'
                     }).then(() => {
                         // Optionally redirect or reset form
-                        $('#labReportForm')[0].reset();
-                        $('#report_date').val(new Date().toISOString().substr(0, 10));
+                        window.location.href = 'view-reports.php';
                     });
                 } else {
                     Swal.fire({

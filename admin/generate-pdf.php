@@ -181,7 +181,7 @@ $pdf->Cell(0, 10, 'Patient Information', 0, 1);
 $pdf->SetFont('helvetica', '', 10);
 
 $patient_info = <<<EOD
-Name: {$report['first_name']} {$report['last_name']}
+Name: {$report['full_name']}
 Age: $age years
 Gender: {$report['gender']}
 Phone: {$report['phone']}
