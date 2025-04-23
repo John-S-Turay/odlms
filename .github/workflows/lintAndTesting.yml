@@ -2,9 +2,9 @@ name: Lint & Test PHP (Staging)
 
 on:
   push:
-    branches: [ feature/patient-report-workflow ]
+    branches: [ fix/patient-report-workflow]
   pull_request:
-    branches: [ feature/patient-report-workflow ]
+    branches: [ fix/patient-report-workflow]
 
 jobs:
   lint-and-test:
