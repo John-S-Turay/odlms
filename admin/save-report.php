@@ -529,7 +529,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                                     <div class="col-md-6">
                                         <label for="clinic_phone" class="form-label required-field">Phone</label>
                                         <input type="tel" class="form-control" id="clinic_phone" name="clinic_phone"
-                                            value="<?= !empty($clinicData['phone']) ? htmlspecialchars($clinicData['phone']) : '+1234567890' ?>"
+                                            value="<?= !empty($clinicData['phone']) ? htmlspecialchars($clinicData['phone']) : '1234567890' ?>"
                                             pattern="[\d\s\-\(\)]{8,20}" required readonly>
                                     </div>
                                     <div class="col-12">
