@@ -115,12 +115,24 @@ if (strlen($_SESSION['odlmsaid']==0)) {
                         <div class="table-responsive">
                             <?php
                             $eid = $_GET['editid'];
-                            $sql = "SELECT a.*, r.file_name as report_filename 
-                                    FROM tblappointment a
-                                    LEFT JOIN tbl_reports r ON a.report_id = r.id
-                                    WHERE a.ID = :eid";
+                            $sql = "SELECT a.*, 
+                                p.id as prescription_id, 
+                                p.file_name as prescription_file, 
+                                p.mime_type as prescription_mime,
+                                p.file_size as prescription_size,
+                                r.id as report_id,
+                                r.file_name as report_filename,
+                                r.mime_type as report_mime,
+                                r.file_size as report_size,
+                                r.uploaded_by as report_uploader,
+                                r.upload_date as report_date
+                            FROM tblappointment a 
+                            LEFT JOIN tbl_prescriptions p ON a.ID = p.appointment_id 
+                            LEFT JOIN tbl_reports r ON a.report_id = r.id
+                            WHERE a.ID = :eid";
+
                             $query = $dbh->prepare($sql);
-                            $query->bindParam(':eid', $eid, PDO::PARAM_STR);
+                            $query->bindParam(':eid', $eid, PDO::PARAM_INT);
                             $query->execute();
                             $results = $query->fetchAll(PDO::FETCH_OBJ);
 
@@ -165,12 +177,20 @@ if (strlen($_SESSION['odlmsaid']==0)) {
                                         <td><?php echo htmlentities($row->AssignTo);?></td>
                                     <?php } ?>
                                     <th>Prescription</th>
-                                    <td>
-                                        <?php if($row->Prescription) { ?>
-                                            <a href="../user/images/<?php echo $row->Prescription;?>" target="_blank">Download Prescription</a>
-                                        <?php } else { ?>
-                                            No Prescription
-                                        <?php } ?>
+                                    <td colspan="3">
+                                        <?php if (!empty($row->prescription_id)) { ?>
+                                            <a href="download-prescription.php?id=<?php echo $row->prescription_id; ?>" 
+                                                target="_blank" 
+                                                class="btn btn-sm btn-primary">
+                                                <i class="fa fa-download"></i> Download Prescription
+                                                <?php if (!empty($row->file_name)): ?>
+                                                    (<?php echo htmlentities($row->file_name); ?>)
+                                                <?php endif; ?>
+                                            </a>
+                                        <?php } else {
+                                            echo "NA";
+                                        } ?>
+                                    </td>
                                 </tr>
                                 <tr>
                                     <th>Apply Date</th>
@@ -192,11 +212,14 @@ if (strlen($_SESSION['odlmsaid']==0)) {
                                 <tr>
                                     <th>Report Status</th>
                                     <td>
-                                        <?php if($row->Status == "Report Uploaded" && $row->report_id) { ?>
-                                            <a href="download-report.php?id=<?php echo $row->report_id;?>" target="_blank">Download Report</a>
-                                        <?php } else { ?>
-                                            Report Not Uploaded Yet
-                                        <?php } ?>
+                                    <?php if (!empty($row->report_id)) { ?>
+                                        <a href="download-report.php?id=<?php echo $row->report_id; ?>" 
+                                        target="_blank" 
+                                        class="btn btn-sm btn-primary">
+                                        <i class="fa fa-download"></i> Download Report
+                                        (<?php echo htmlentities($row->report_filename); ?>)
+                                        </a>
+                                    <?php } else { echo "Report Not Available"; } ?>
                                     </td>
                                 </tr>
                             </table>

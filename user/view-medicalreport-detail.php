@@ -69,10 +69,21 @@ $vid = $_GET['viewid'];
                                 <div class="table-responsive">
                                     <?php
                                     // Fetch appointment details from the database with report information
-                                    $sql = "SELECT a.*, r.file_name as report_filename 
-                                            FROM tblappointment a
-                                            LEFT JOIN tbl_reports r ON a.report_id = r.id
-                                            WHERE a.ID = :vid AND a.UserID = :userid";
+                                    $sql = "SELECT a.*, 
+                                        p.id as prescription_id, 
+                                        p.file_name as prescription_file, 
+                                        p.mime_type as prescription_mime,
+                                        p.file_size as prescription_size,
+                                        r.id as report_id,
+                                        r.file_name as report_filename,
+                                        r.mime_type as report_mime,
+                                        r.file_size as report_size,
+                                        r.uploaded_by as report_uploader,
+                                        r.upload_date as report_date
+                                    FROM tblappointment a 
+                                    LEFT JOIN tbl_prescriptions p ON a.ID = p.appointment_id 
+                                    LEFT JOIN tbl_reports r ON a.report_id = r.id
+                                    WHERE a.ID = :vid AND a.UserID = :userid";
                                     $query = $dbh->prepare($sql);
                                     $query->bindParam(':vid', $vid, PDO::PARAM_STR);
                                     $query->bindParam(':userid', $_SESSION['odlmsuid'], PDO::PARAM_STR);
@@ -114,17 +125,20 @@ $vid = $_GET['viewid'];
                                                 </tr>
                                                 <tr>
                                                     <th>Prescription</th>
-                                                    <td>
-                                                        <?php
-                                                        if (!empty($row->Prescription)) {
-                                                            echo '<a href="images/' . htmlspecialchars($row->Prescription) . '" target="_blank">Download Prescription</a>';
-                                                        } else {
+                                                    <td colspan="1">
+                                                        <?php if (!empty($row->prescription_id)) { ?>
+                                                            <a href="download-prescription.php?id=<?php echo $row->prescription_id; ?>" 
+                                                            target="_blank" 
+                                                            class="btn btn-sm btn-primary">
+                                                            <i class="fa fa-download"></i> Download Prescription
+                                                            <?php if (!empty($row->file_name)): ?>
+                                                                (<?php echo htmlentities($row->file_name); ?>)
+                                                            <?php endif; ?>
+                                                            </a>
+                                                        <?php } else {
                                                             echo "NA";
-                                                        }
-                                                        ?>
+                                                        } ?>
                                                     </td>
-                                                    <th>Date of Birth</th>
-                                                    <td><?php echo htmlspecialchars($row->DOB); ?></td>
                                                 </tr>
                                                 <tr>
                                                     <th>Apply Date</th>
@@ -166,13 +180,14 @@ $vid = $_GET['viewid'];
                                                 <tr>
                                                     <th>Report</th>
                                                     <td>
-                                                        <?php
-                                                        if (!empty($row->report_id)) {
-                                                            echo '<a href="download-report.php?id=' . htmlspecialchars($row->report_id) . '" target="_blank">Download Report</a>';
-                                                        } else {
-                                                            echo "NA";
-                                                        }
-                                                        ?>
+                                                    <?php if (!empty($row->report_id)) { ?>
+                                                        <a href="download-report.php?id=<?php echo $row->report_id; ?>" 
+                                                        target="_blank" 
+                                                        class="btn btn-sm btn-primary">
+                                                        <i class="fa fa-download"></i> Download Report
+                                                        (<?php echo htmlentities($row->report_filename); ?>)
+                                                        </a>
+                                                    <?php } else { echo "Report Not Available"; } ?>
                                                     </td>
                                                     <th>Report Uploaded Date</th>
                                                     <td><?php echo htmlspecialchars($row->ReportUploadedDate); ?></td>

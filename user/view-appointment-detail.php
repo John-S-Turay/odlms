@@ -69,7 +69,10 @@ $vid = $_GET['viewid'];
                                 <div class="table-responsive">
                                     <?php
                                     // Fetch appointment details from the database
-                                    $sql = "SELECT * FROM tblappointment WHERE ID = :vid";
+                                    $sql = "SELECT a.*, p.id as prescription_id, p.file_name, p.mime_type, p.file_size
+                                            FROM tblappointment a 
+                                            LEFT JOIN tbl_prescriptions p ON a.ID = p.appointment_id 
+                                            WHERE a.ID = :vid";
                                     $query = $dbh->prepare($sql);
                                     $query->bindParam(':vid', $vid, PDO::PARAM_STR);
                                     $query->execute();
@@ -112,17 +115,20 @@ $vid = $_GET['viewid'];
                                                 </tr>
                                                 <tr>
                                                     <th>Prescription</th>
-                                                    <td>
-                                                        <?php
-                                                        if (!empty($row->Prescription)) {
-                                                            echo '<a href="images/' . htmlspecialchars($row->Prescription) . '" target="_blank">Download Prescription</a>';
-                                                        } else {
+                                                    <td colspan="1">
+                                                        <?php if (!empty($row->prescription_id)) { ?>
+                                                            <a href="download-prescription.php?id=<?php echo $row->prescription_id; ?>" 
+                                                            target="_blank" 
+                                                            class="btn btn-sm btn-primary">
+                                                            <i class="fa fa-download"></i> Download Prescription
+                                                            <?php if (!empty($row->file_name)): ?>
+                                                                (<?php echo htmlentities($row->file_name); ?>)
+                                                            <?php endif; ?>
+                                                            </a>
+                                                        <?php } else {
                                                             echo "NA";
-                                                        }
-                                                        ?>
-                                                    </td>
-                                                    <th>Date of Birth</th>
-                                                    <td><?php echo htmlspecialchars($row->DOB); ?></td>
+                                                        } ?>
+                                                    </td>   
                                                 </tr>
                                                 <tr>
                                                     <th>Apply Date</th>
