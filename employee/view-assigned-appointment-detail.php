@@ -136,8 +136,7 @@ if (strlen($_SESSION['odlmseid']) == 0) {
                                         <tr>
                                             <th>Assign To</th>
                                             <td><?php echo $row->AssignTo; ?></td>
-                                            <th>Date of Birth</th>
-                                            <td><?php echo $row->DOB; ?></td>
+                                            
                                         </tr>
                                         <tr>
                                             <th>Apply Date</th>
