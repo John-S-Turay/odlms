@@ -11,14 +11,15 @@ if (strlen($_SESSION['odlmsaid']==0)) {
     $AName=$_POST['adminname'];
   $mobno=$_POST['mobilenumber'];
   $email=$_POST['email'];
-  $sql="update tbladmin set AdminName=:adminname,MobileNumber=:mobilenumber,Email=:email where ID=:aid";
-     $query = $dbh->prepare($sql);
-     $query->bindParam(':adminname',$AName,PDO::PARAM_STR);
-     $query->bindParam(':email',$email,PDO::PARAM_STR);
-     $query->bindParam(':mobilenumber',$mobno,PDO::PARAM_STR);
-     $query->bindParam(':aid',$adminid,PDO::PARAM_STR);
-$query->execute();
-
+  $address=$_POST['address'];
+  $sql="update tbladmin set AdminName=:adminname,MobileNumber=:mobilenumber,Email=:email,Address=:address where ID=:aid";
+    $query = $dbh->prepare($sql);
+    $query->bindParam(':adminname',$AName,PDO::PARAM_STR);
+    $query->bindParam(':email',$email,PDO::PARAM_STR);
+    $query->bindParam(':mobilenumber',$mobno,PDO::PARAM_STR);
+    $query->bindParam(':address',$address,PDO::PARAM_STR);
+    $query->bindParam(':aid',$adminid,PDO::PARAM_STR);
+    $query->execute();
         echo '<script>alert("Profile has been updated")</script>';
      
 
@@ -96,6 +97,12 @@ foreach($results as $row)
                 <div class="col-sm-9">
                   <input type="email" class="form-control" id="email2" name="email" value="<?php  echo $row->Email;?>" required='true'>
                 </div>
+              </div>
+              <div class="form-group">
+                  <label for="address" class="col-sm-3 control-label">Address:</label>
+                  <div class="col-sm-9">
+                      <textarea class="form-control" id="address" name="address" rows="3"><?php echo htmlspecialchars($row->Address ?? ''); ?></textarea>
+                  </div>
               </div>
                <div class="form-group">
                 <label for="email2" class="col-sm-3 control-label">Contact Number:</label>
