@@ -1,66 +1,68 @@
 <aside id="menubar" class="menubar light">
-  <div class="app-user">
-    <div class="media">
-      <div class="media-left">
-        <div class="avatar avatar-md avatar-circle">
-          <a href="javascript:void(0)"><img class="img-responsive" src="assets/images/images.png" alt="avatar"/></a>
-        </div><!-- .avatar -->
-      </div>
-      <div class="media-body">
-        <div class="foldable">
-          <?php
-$aid=$_SESSION['odlmsaid'];
-$sql="SELECT AdminName,Email from  tbladmin where ID=:aid";
-$query = $dbh -> prepare($sql);
-$query->bindParam(':aid',$aid,PDO::PARAM_STR);
-$query->execute();
-$results=$query->fetchAll(PDO::FETCH_OBJ);
-$cnt=1;
-if($query->rowCount() > 0)
-{
-foreach($results as $row)
-{               ?>
-          <h5><a href="javascript:void(0)" class="username"><?php  echo $row->AdminName;?></a></h5><?php $cnt=$cnt+1;}} ?>
-          
-          <ul>
-            <li class="dropdown">
-              <a href="javascript:void(0)" class="dropdown-toggle usertitle" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
-                <small><?php  echo $row->Email;?></small>
-                <span class="caret"></span>
-              </a>
-              <ul class="dropdown-menu animated flipInY">
-                <li>
-                  <a class="text-color" href="dashboard.php">
-                    <span class="m-r-xs"><i class="fa fa-home"></i></span>
-                    <span>Home</span>
-                  </a>
-                </li>
-                <li>
-                  <a class="text-color" href="profile.php">
-                    <span class="m-r-xs"><i class="fa fa-user"></i></span>
-                    <span>Profile</span>
-                  </a>
-                </li>
-                <li>
-                  <a class="text-color" href="change-password.php">
-                    <span class="m-r-xs"><i class="fa fa-gear"></i></span>
-                    <span>Settings</span>
-                  </a>
-                </li>
-                <li role="separator" class="divider"></li>
-                <li>
-                  <a class="text-color" href="logout.php">
-                    <span class="m-r-xs"><i class="fa fa-power-off"></i></span>
-                    <span>logout</span>
-                  </a>
-                </li>
-              </ul>
-            </li>
-          </ul>
-        </div>
-      </div><!-- .media-body -->
-    </div><!-- .media -->
-  </div><!-- .app-user -->
+    <div class="app-user">
+        <div class="media">
+            <div class="media-left">
+                <div class="avatar avatar-md avatar-circle">
+                    <a href="javascript:void(0)">
+                        <?php
+                        $aid = $_SESSION['odlmsaid'];
+                        $sql = "SELECT AdminName, Email, ProfilePhoto FROM tbladmin WHERE ID = :aid";
+                        $query = $dbh->prepare($sql);
+                        $query->bindParam(':aid', $aid, PDO::PARAM_STR);
+                        $query->execute();
+                        $result = $query->fetch(PDO::FETCH_OBJ);
+                        
+                        if (!empty($result->ProfilePhoto) && file_exists('adminprofile/'.$result->ProfilePhoto)) {
+                            echo '<img class="img-responsive" src="adminprofile/'.htmlspecialchars($result->ProfilePhoto).'" alt="Profile Photo"/>';
+                        } else {
+                            echo '<img class="img-responsive" src="assets/images/images.png" alt="Default Avatar"/>';
+                        }
+                        ?>
+                    </a>
+                </div><!-- .avatar -->
+            </div>
+            <div class="media-body">
+                <div class="foldable">
+                    <h5><a href="javascript:void(0)" class="username"><?php echo htmlspecialchars($result->AdminName); ?></a></h5>
+                    <ul>
+                        <li class="dropdown">
+                            <a href="javascript:void(0)" class="dropdown-toggle usertitle" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
+                                <small><?php echo htmlspecialchars($result->Email); ?></small>
+                                <span class="caret"></span>
+                            </a>
+                            <ul class="dropdown-menu animated flipInY">
+                                <li>
+                                    <a class="text-color" href="dashboard.php">
+                                        <span class="m-r-xs"><i class="fa fa-home"></i></span>
+                                        <span>Home</span>
+                                    </a>
+                                </li>
+                                <li>
+                                    <a class="text-color" href="profile.php">
+                                        <span class="m-r-xs"><i class="fa fa-user"></i></span>
+                                        <span>Profile</span>
+                                    </a>
+                                </li>
+                                <li>
+                                    <a class="text-color" href="change-password.php">
+                                        <span class="m-r-xs"><i class="fa fa-gear"></i></span>
+                                        <span>Settings</span>
+                                    </a>
+                                </li>
+                                <li role="separator" class="divider"></li>
+                                <li>
+                                    <a class="text-color" href="logout.php">
+                                        <span class="m-r-xs"><i class="fa fa-power-off"></i></span>
+                                        <span>logout</span>
+                                    </a>
+                                </li>
+                            </ul>
+                        </li>
+                    </ul>
+                </div>
+            </div><!-- .media-body -->
+        </div><!-- .media -->
+    </div><!-- .app-user -->
 
   <div class="menubar-scroll">
     <div class="menubar-scroll-inner">
