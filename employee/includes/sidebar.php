@@ -3,29 +3,34 @@
     <div class="media">
       <div class="media-left">
         <div class="avatar avatar-md avatar-circle">
-          <a href="javascript:void(0)"><img class="img-responsive" src="assets/images/images.png" alt="avatar"/></a>
+          <?php
+          $eid = $_SESSION['odlmseid'];
+          // Fetch profile photo from database
+          $sql = "SELECT ProfilePhoto, Name, Email FROM tblemployee WHERE ID = :eid";
+          $query = $dbh->prepare($sql);
+          $query->bindParam(':eid', $eid, PDO::PARAM_STR);
+          $query->execute();
+          $result = $query->fetch(PDO::FETCH_OBJ);
+          
+          if (!empty($result->ProfilePhoto) && file_exists('employeeprofile/'.$result->ProfilePhoto)) {
+              echo '<img class="img-responsive" src="employeeprofile/'.htmlspecialchars($result->ProfilePhoto).'" alt="Profile Picture">';
+          } else {
+              echo '<img class="img-responsive" src="assets/images/default-avatar.jpg" alt="Default Avatar">';
+          }
+          ?>
         </div><!-- .avatar -->
       </div>
       <div class="media-body">
         <div class="foldable">
           <?php
-$eid=$_SESSION['odlmseid'];
-$sql="SELECT Name,Email from  tblemployee where ID=:eid";
-$query = $dbh -> prepare($sql);
-$query->bindParam(':eid',$eid,PDO::PARAM_STR);
-$query->execute();
-$results=$query->fetchAll(PDO::FETCH_OBJ);
-
-foreach($results as $row)
-{    
-$email=$row->Email;   
-$fname=$row->Name;     
-}   ?>
-          <h5><a href="javascript:void(0)" class="username"><?php  echo $fname ;?></a></h5>
+          $email = $result->Email;   
+          $fname = $result->Name;
+          ?>
+          <h5><a href="javascript:void(0)" class="username"><?php echo htmlspecialchars($fname); ?></a></h5>
           <ul>
             <li class="dropdown">
               <a href="javascript:void(0)" class="dropdown-toggle usertitle" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
-                <small><?php  echo $email;?></small>
+                <small><?php echo htmlspecialchars($email); ?></small>
                 <span class="caret"></span>
               </a>
               <ul class="dropdown-menu animated flipInY">
@@ -69,9 +74,7 @@ $fname=$row->Name;
           <a href="dashboard.php">
             <i class="menu-icon zmdi zmdi-view-dashboard zmdi-hc-lg"></i>
             <span class="menu-text">Dashboard</span>
-            
           </a>
-       
         </li>
         
         <li class="has-submenu">
@@ -79,7 +82,6 @@ $fname=$row->Name;
             <i class="menu-icon zmdi zmdi-layers zmdi-hc-lg"></i>
             <span class="menu-text">View Test Detail</span>
            </a>
-          
         </li>
 
        <li class="has-submenu">
@@ -94,8 +96,6 @@ $fname=$row->Name;
             <li><a href="sample-collected.php"><span class="menu-text">Sample Collected</span></a></li>
             <li><a href="sample-sent-to-lab.php"><span class="menu-text">Sent to Lab</span></a></li>
             <li><a href="total-appointment.php"><span class="menu-text">Total Appointment</span></a></li>
-            
-           
           </ul>
         </li>
         
@@ -111,8 +111,30 @@ $fname=$row->Name;
             <span class="menu-text">Report</span>
           </a>
         </li>
-
       </ul><!-- .app-menu -->
     </div><!-- .menubar-scroll-inner -->
   </div><!-- .menubar-scroll -->
 </aside>
+
+<style>
+/* Avatar styling */
+.avatar-md {
+    width: 48px;
+    height: 48px;
+}
+.avatar-circle {
+    border-radius: 50%;
+    overflow: hidden;
+    border: 2px solid #eee;
+    transition: all 0.3s ease;
+}
+.avatar-circle img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+}
+.avatar-circle:hover {
+    border-color: #4CAF50;
+    transform: scale(1.05);
+}
+</style>
