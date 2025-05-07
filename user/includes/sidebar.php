@@ -29,6 +29,28 @@ if (!isset($_SESSION['odlmsuid']) || strlen($_SESSION['odlmsuid']) == 0) {
     <link rel="stylesheet" href="assets/css/app.css">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/4.7.0/css/font-awesome.min.css">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/material-design-iconic-font/2.2.0/css/material-design-iconic-font.min.css">
+    <style>
+        /* Avatar styling */
+        .avatar-md {
+            width: 48px;
+            height: 48px;
+        }
+        .avatar-circle {
+            border-radius: 50%;
+            overflow: hidden;
+            border: 2px solid #eee;
+        }
+        .avatar-circle img {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+        }
+        /* Hover effects */
+        .avatar-circle:hover {
+            border-color: #4CAF50;
+            transition: border-color 0.3s ease;
+        }
+    </style>
 </head>
 <body>
     <!-- Sidebar -->
@@ -38,7 +60,21 @@ if (!isset($_SESSION['odlmsuid']) || strlen($_SESSION['odlmsuid']) == 0) {
             <div class="media">
                 <div class="media-left">
                     <div class="avatar avatar-md avatar-circle">
-                        <img class="img-responsive" src="assets/images/images.png" alt="User Avatar">
+                        <?php
+                        // Fetch user profile photo
+                        $uid = $_SESSION['odlmsuid'];
+                        $sql = "SELECT ProfilePhoto FROM tbluser WHERE ID = :uid";
+                        $query = $dbh->prepare($sql);
+                        $query->bindParam(':uid', $uid, PDO::PARAM_STR);
+                        $query->execute();
+                        $profilePhoto = $query->fetchColumn();
+                        
+                        if (!empty($profilePhoto) && file_exists('userprofile/'.$profilePhoto)) {
+                            echo '<img class="img-responsive" src="userprofile/'.htmlspecialchars($profilePhoto).'" alt="User Avatar">';
+                        } else {
+                            echo '<img class="img-responsive" src="assets/images/default-avatar.jpg" alt="Default Avatar">';
+                        }
+                        ?>
                     </div><!-- .avatar -->
                 </div>
                 <div class="media-body">
