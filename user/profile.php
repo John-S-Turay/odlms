@@ -21,12 +21,14 @@ if (isset($_POST['submit'])) {
     $AName = $_POST['name'];
     $mobno = $_POST['mobilenumber'];
     $email = $_POST['email'];
+    $address = $_POST['address'];
 
     // Update the user's profile in the database
-    $sql = "UPDATE tbluser SET FullName = :name, MobileNumber = :mobilenumber, Email = :email WHERE ID = :uid";
+    $sql = "UPDATE tbluser SET FullName = :name, MobileNumber = :mobilenumber, Email = :email, Address = :address  WHERE ID = :uid";
     $query = $dbh->prepare($sql);
     $query->bindParam(':name', $AName, PDO::PARAM_STR);
     $query->bindParam(':mobilenumber', $mobno, PDO::PARAM_STR);
+    $query->bindParam(':address', $address, PDO::PARAM_STR);
     $query->bindParam(':email', $email, PDO::PARAM_STR);
     $query->bindParam(':uid', $uid, PDO::PARAM_STR);
 
@@ -113,6 +115,13 @@ if (isset($_POST['submit'])) {
                                                 <label for="mobilenumber" class="col-sm-3 control-label">Contact Number:</label>
                                                 <div class="col-sm-9">
                                                     <input type="text" class="form-control" id="mobilenumber" name="mobilenumber" value="<?php echo htmlspecialchars($row->MobileNumber); ?>" maxlength="10" readonly>
+                                                </div>
+                                            </div>
+
+                                            <div class="form-group">
+                                                <label for="address" class="col-sm-3 control-label">Address:</label>
+                                                <div class="col-sm-9">
+                                                    <textarea class="form-control" id="address" name="address" rows="3"><?php echo htmlspecialchars($row->Address ?? ''); ?></textarea>
                                                 </div>
                                             </div>
 
