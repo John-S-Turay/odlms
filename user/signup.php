@@ -15,6 +15,7 @@ if (isset($_POST['submit'])) {
     $fname = $_POST['fname'];
     $mobno = $_POST['mobno'];
     $email = $_POST['email'];
+    $address = $_POST['address'];
     $password = $_POST['password'];
 
     // Check if the email already exists
@@ -29,11 +30,12 @@ if (isset($_POST['submit'])) {
         $hashedPassword = password_hash($password, PASSWORD_DEFAULT);
 
         // Insert new user into the database
-        $sql = "INSERT INTO tbluser (FullName, MobileNumber, Email, Password) VALUES (:fname, :mobno, :email, :password)";
+        $sql = "INSERT INTO tbluser (FullName, MobileNumber, Email, Address, Password) VALUES (:fname, :mobno, :email, :address, :password)";
         $query = $dbh->prepare($sql);
         $query->bindParam(':fname', $fname, PDO::PARAM_STR);
         $query->bindParam(':email', $email, PDO::PARAM_STR);
         $query->bindParam(':mobno', $mobno, PDO::PARAM_INT);
+        $query->bindParam(':address', $address, PDO::PARAM_STR);
         $query->bindParam(':password', $hashedPassword, PDO::PARAM_STR);
         $query->execute();
 
@@ -99,6 +101,11 @@ if (isset($_POST['submit'])) {
                 <!-- Mobile Number Field -->
                 <div class="form-group">
                     <input id="mobno" type="text" class="form-control" placeholder="Mobile" name="mobno" maxlength="10" pattern="[0-9]+" required>
+                </div>
+
+                <!-- Address Field -->
+                <div class="form-group">
+                    <input id="address" type="text" class="form-control" placeholder="Adresss" name="address" required>
                 </div>
 
                 <!-- Password Field -->
