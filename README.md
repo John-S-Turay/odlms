@@ -15,18 +15,31 @@ ODLMS is a secure and user-friendly web application that allows patients to regi
 
 ## 🚀 Features
 
-### Patient Module
-- Online registration and secure login
-- Book tests with prescription upload
-- Choose date, time slot, and payment method
-- View/download reports from dashboard
+### 🧍 Patient Module
+- Register securely and log in
+- Book tests (blood, urine, etc.) online
+- Upload prescriptions during booking
+- Select appointment date, time, and payment method
+- View and download test reports in PDF format
+- Receive appointment and result notifications
 
-### Admin Module
-- Dashboard overview of all stats
-- Manage appointments (approve, reject)
-- Upload PDF lab reports
-- Track appointment lifecycle
-- Set available time slots
+### 🛠️ Admin Module
+- Secure login with session management
+- View summary stats (appointments, patients, reports)
+- Manage and approve/cancel patient appointments
+- Upload PDF reports and update status history
+- Create, enable/disable, and delete time slots
+- Manage lab employees and their assignments
+
+### 👨‍⚕️ Employee (Lab Staff) Module
+- Secure employee login
+- View assigned appointments
+- Mark sample collection as completed
+- Upload sample tracking details
+- Access basic patient info needed for diagnosis
+- Log sample receipt or transfer
+
+> Employees can only access assigned functionalities. All actions are controlled through **role-based access permissions**.
 
 ---
 
