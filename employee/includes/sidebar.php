@@ -98,7 +98,6 @@
             <li><a href="total-appointment.php"><span class="menu-text">Total Appointment</span></a></li>
           </ul>
         </li>
-        
         <li>
           <a href="search.php">
             <i class="menu-icon zmdi zmdi-search zmdi-hc-lg"></i>
@@ -110,6 +109,13 @@
             <i class="menu-icon zmdi zmdi-layers zmdi-hc-lg"></i>
             <span class="menu-text">Report</span>
           </a>
+        </li>
+        <!-- Enable 2fa -->
+        <li>
+            <a href="security_settings.php" style="display: flex; align-items: center; gap: 10px;">
+              <i class="zmdi zmdi-shield-security" style="font-size: 18px;"></i>
+              <span class="menu-text">Enable 2-Factor Authentication</span>
+            </a>
         </li>
       </ul><!-- .app-menu -->
     </div><!-- .menubar-scroll-inner -->
