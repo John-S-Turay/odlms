@@ -3,7 +3,7 @@
 -- https://www.phpmyadmin.net/
 --
 -- Host: sql113.infinityfree.com
--- Generation Time: May 21, 2025 at 11:31 AM
+-- Generation Time: May 25, 2025 at 06:44 PM
 -- Server version: 10.6.19-MariaDB
 -- PHP Version: 7.2.22
 
@@ -178,15 +178,17 @@ CREATE TABLE `tbladmin` (
   `ProfilePhoto` varchar(255) DEFAULT NULL,
   `Email` varchar(200) DEFAULT NULL,
   `Password` varchar(200) DEFAULT NULL,
-  `AdminRegdate` timestamp NULL DEFAULT current_timestamp()
+  `AdminRegdate` timestamp NULL DEFAULT current_timestamp(),
+  `two_factor_enabled` tinyint(1) DEFAULT 0,
+  `two_factor_secret` varchar(255) DEFAULT NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
 --
 -- Dumping data for table `tbladmin`
 --
 
-INSERT INTO `tbladmin` (`ID`, `AdminName`, `UserName`, `MobileNumber`, `Address`, `ProfilePhoto`, `Email`, `Password`, `AdminRegdate`) VALUES
-(1, 'John Santigie Turay', 'admin', 8979555557, 'Budapesti ut 23', 'admin_1_1746639798.png', 'turayjohns@gmail.com', '$2y$10$NvUau1QQh79hRkrCAimlguz5nV7LydDPqiEbgbcOO5SeHZw3dSFvK', '2025-01-02 12:23:36');
+INSERT INTO `tbladmin` (`ID`, `AdminName`, `UserName`, `MobileNumber`, `Address`, `ProfilePhoto`, `Email`, `Password`, `AdminRegdate`, `two_factor_enabled`, `two_factor_secret`) VALUES
+(1, 'John Santigie Turay', 'admin', 8979555557, 'Budapesti ut 23', 'admin_1_1746639798.png', 'turayjohns@gmail.com', '$2y$10$NvUau1QQh79hRkrCAimlguz5nV7LydDPqiEbgbcOO5SeHZw3dSFvK', '2025-01-02 12:23:36', 0, NULL);
 
 -- --------------------------------------------------------
 
@@ -270,15 +272,17 @@ CREATE TABLE `tblemployee` (
   `Address` mediumtext DEFAULT NULL,
   `ProfilePhoto` varchar(255) DEFAULT NULL,
   `Password` varchar(120) DEFAULT NULL,
-  `JoiningDate` timestamp NULL DEFAULT current_timestamp()
+  `JoiningDate` timestamp NULL DEFAULT current_timestamp(),
+  `two_factor_enabled` tinyint(1) DEFAULT 0,
+  `two_factor_secret` varchar(255) DEFAULT NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
 --
 -- Dumping data for table `tblemployee`
 --
 
-INSERT INTO `tblemployee` (`ID`, `EmpID`, `Name`, `MobileNumber`, `Email`, `Address`, `ProfilePhoto`, `Password`, `JoiningDate`) VALUES
-(2, 'Lab1124', 'Abu Turay', 8797977979, 'abuturay@gmail.com', '18 old mabanta road', 'emp_2_1746639985.jpg', '$2y$10$qVsb/nUw4/sxmgiXtI7NG.QUbkSVdcfF9NH7IxZXuKz7EFwTDNcwa', '2025-01-08 11:47:24');
+INSERT INTO `tblemployee` (`ID`, `EmpID`, `Name`, `MobileNumber`, `Email`, `Address`, `ProfilePhoto`, `Password`, `JoiningDate`, `two_factor_enabled`, `two_factor_secret`) VALUES
+(2, 'Lab1124', 'Abu Turay', 8797977979, 'abuturay@gmail.com', '18 old mabanta road', 'emp_2_1746639985.jpg', '$2y$10$qVsb/nUw4/sxmgiXtI7NG.QUbkSVdcfF9NH7IxZXuKz7EFwTDNcwa', '2025-01-08 11:47:24', 0, NULL);
 
 -- --------------------------------------------------------
 
@@ -405,17 +409,19 @@ CREATE TABLE `tbluser` (
   `ProfilePhoto` varchar(255) DEFAULT NULL,
   `Email` varchar(200) DEFAULT NULL,
   `Password` varchar(200) DEFAULT NULL,
-  `RegDate` timestamp NULL DEFAULT current_timestamp()
+  `RegDate` timestamp NULL DEFAULT current_timestamp(),
+  `two_factor_enabled` tinyint(1) DEFAULT 0,
+  `two_factor_secret` varchar(255) DEFAULT NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
 --
 -- Dumping data for table `tbluser`
 --
 
-INSERT INTO `tbluser` (`ID`, `FullName`, `MobileNumber`, `Address`, `ProfilePhoto`, `Email`, `Password`, `RegDate`) VALUES
-(1, 'Angella Turay', 6868687877, '18 Old Mabanta Road', 'user_1_1746639729.jpg', 'aturay@gmail.com', '$2y$10$HMHobp0d1az/H6FVR1Kk3OnJ68AIw3JpjF1iuY1a0eiejJIhlfq0G', '2025-01-06 06:35:44'),
-(6, 'Mohamed Turay', 1122334455, NULL, NULL, 'mt@gmail.com', '$2y$10$UmmX4aqkOx5sBqq3S7RRruFuxL9rbwUYeersJqmUK4PdlFAURT7t6', '2025-04-09 17:02:22'),
-(7, 'Ibrahim Koroma', 3670608631, NULL, NULL, 'ibrahimkoroma330@gmail.com', '$2y$10$GTEJbUXzYvtChTMc/k/8Cevq0LNiJF0.TxiRAsqrIpq/B2X3nu.pG', '2025-04-18 18:06:22');
+INSERT INTO `tbluser` (`ID`, `FullName`, `MobileNumber`, `Address`, `ProfilePhoto`, `Email`, `Password`, `RegDate`, `two_factor_enabled`, `two_factor_secret`) VALUES
+(1, 'Angella Turay', 6868687877, '18 Old Mabanta Road', 'user_1_1746639729.jpg', 'aturay@gmail.com', '$2y$10$HMHobp0d1az/H6FVR1Kk3OnJ68AIw3JpjF1iuY1a0eiejJIhlfq0G', '2025-01-06 06:35:44', 0, NULL),
+(6, 'Mohamed Turay', 1122334455, NULL, NULL, 'mt@gmail.com', '$2y$10$UmmX4aqkOx5sBqq3S7RRruFuxL9rbwUYeersJqmUK4PdlFAURT7t6', '2025-04-09 17:02:22', 0, NULL),
+(7, 'Ibrahim Koroma', 3670608631, NULL, NULL, 'ibrahimkoroma330@gmail.com', '$2y$10$GTEJbUXzYvtChTMc/k/8Cevq0LNiJF0.TxiRAsqrIpq/B2X3nu.pG', '2025-04-18 18:06:22', 0, NULL);
 
 -- --------------------------------------------------------
 
