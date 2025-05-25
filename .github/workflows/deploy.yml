@@ -23,7 +23,12 @@ jobs:
         username: ${{ secrets.FTP_USERNAME }}
         password: ${{ secrets.FTP_PASSWORD }}
         server-dir: ${{ secrets.FTP_TARGET }}/
-        exclude: |
+    run: |
+          lftp -c "
+          open -u $FTP_USERNAME,$FTP_PASSWORD $FTP_SERVER
+          mirror -R --delete --verbose ./ $FTP_TARGET
+          "
+    exclude: |
             **/.git*
             **/.github*
             **/README.md
@@ -33,9 +38,5 @@ jobs:
             admin/includes/dbconnection.php
             user/includes/dbconnection.php
             employee/includes/dbconnection.php
-        run: |
-          lftp -c "
-          open -u $FTP_USERNAME,$FTP_PASSWORD $FTP_SERVER
-          mirror -R --delete --verbose ./ $FTP_TARGET
-          "
+       
         verbose: true
