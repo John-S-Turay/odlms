@@ -3,13 +3,13 @@ session_start();
 include('includes/dbconnection.php');
 include('includes/2fa_functions.php');
 
-if (!isset($_SESSION['odlmsuid'])) {
+if (!isset($_SESSION['odlmseid'])) {
     header("Location: login.php");
     exit();
 }
 
-$user_id = $_SESSION['odlmsuid'];
-$query = $dbh->prepare("SELECT Email, two_factor_enabled, two_factor_secret FROM tbluser WHERE ID = :id");
+$user_id = $_SESSION['odlmseid'];
+$query = $dbh->prepare("SELECT Email, two_factor_enabled, two_factor_secret FROM tblemployee WHERE ID = :id");
 $query->bindParam(':id', $user_id, PDO::PARAM_INT);
 $query->execute();
 $user = $query->fetch(PDO::FETCH_OBJ);
@@ -17,7 +17,7 @@ $user = $query->fetch(PDO::FETCH_OBJ);
 // Handle form submissions
 if (isset($_POST['enable_2fa'])) {
     $secret = generate2FASecret();
-    $query = $dbh->prepare("UPDATE tbluser SET two_factor_secret = :secret WHERE ID = :id");
+    $query = $dbh->prepare("UPDATE tblemployee SET two_factor_secret = :secret WHERE ID = :id");
     $query->bindParam(':secret', $secret, PDO::PARAM_STR);
     $query->bindParam(':id', $user_id, PDO::PARAM_INT);
     $query->execute();
@@ -30,7 +30,7 @@ if (isset($_POST['enable_2fa'])) {
 if (isset($_POST['confirm_2fa'])) {
     $code = $_POST['2fa_code'];
     if (verify2FACode($user->two_factor_secret, $code)) {
-        $query = $dbh->prepare("UPDATE tbluser SET two_factor_enabled = 1 WHERE ID = :id");
+        $query = $dbh->prepare("UPDATE tblemployee SET two_factor_enabled = 1 WHERE ID = :id");
         $query->bindParam(':id', $user_id, PDO::PARAM_INT);
         $query->execute();
         
@@ -42,7 +42,7 @@ if (isset($_POST['confirm_2fa'])) {
 }
 
 if (isset($_POST['disable_2fa'])) {
-    $query = $dbh->prepare("UPDATE tbluser SET two_factor_enabled = 0, two_factor_secret = NULL WHERE ID = :id");
+    $query = $dbh->prepare("UPDATE tblemployee SET two_factor_enabled = 0, two_factor_secret = NULL WHERE ID = :id");
     $query->bindParam(':id', $user_id, PDO::PARAM_INT);
     $query->execute();
     
