@@ -1,25 +1,17 @@
 <?php
-// Start a session to manage user sessions
 session_start();
-
-// Disable error reporting for production (enable during development)
 error_reporting(0);
-
-// Include the database connection file
 include('includes/dbconnection.php');
+include('includes/2fa_functions.php'); // Include 2FA functions
 
-// Handle form submission
 if (isset($_POST['login'])) {
-    // Retrieve and sanitize form data
     $empid = htmlspecialchars($_POST['empid']);
     $password = $_POST['password'];
 
-    // Validate inputs
     if (empty($empid) || empty($password)) {
         echo "<script>alert('Please fill in all fields.');</script>";
     } else {
-        // Fetch employee details from the database
-        $sql = "SELECT ID, EmpID, Password FROM tblemployee WHERE EmpID = :empid";
+        $sql = "SELECT ID, EmpID, Password, two_factor_enabled, two_factor_secret FROM tblemployee WHERE EmpID = :empid";
         $query = $dbh->prepare($sql);
         $query->bindParam(':empid', $empid, PDO::PARAM_STR);
         $query->execute();
@@ -27,16 +19,25 @@ if (isset($_POST['login'])) {
 
         if ($query->rowCount() > 0) {
             foreach ($results as $result) {
-                // Verify the password
                 if (password_verify($password, $result->Password)) {
-                    // Set session variables
-                    $_SESSION['odlmseid'] = $result->ID;
-                    $_SESSION['odlmsempid'] = $result->EmpID;
-                    $_SESSION['login'] = $empid;
-
-                    // Redirect to the dashboard
-                    echo "<script>document.location ='dashboard.php';</script>";
-                    exit();
+                    // Check if 2FA is enabled
+                    if ($result->two_factor_enabled) {
+                        // Store temporary session for 2FA verification
+                        $_SESSION['pending_user_id'] = $result->ID;
+                        $_SESSION['pending_empid'] = $result->EmpID;
+                        $_SESSION['two_factor_secret'] = $result->two_factor_secret;
+                        
+                        // Redirect to 2FA verification
+                        echo "<script>document.location ='verify_2fa.php';</script>";
+                        exit();
+                    } else {
+                        // No 2FA - proceed with normal login
+                        $_SESSION['odlmseid'] = $result->ID;
+                        $_SESSION['odlmsempid'] = $result->EmpID;
+                        $_SESSION['login'] = $empid;
+                        echo "<script>document.location ='dashboard.php';</script>";
+                        exit();
+                    }
                 } else {
                     echo "<script>alert('Invalid password.');</script>";
                 }

@@ -4,6 +4,7 @@ session_start();
 
 // Include the database connection file
 include('includes/dbconnection.php');
+include('includes/2fa_functions.php');
 
 // Check if the login form is submitted
 if (isset($_POST['login'])) {
@@ -11,8 +12,8 @@ if (isset($_POST['login'])) {
     $email = $_POST['email'];
     $password = $_POST['password'];
 
-    // Fetch the user's hashed password from the database
-    $sql = "SELECT ID, Password FROM tbluser WHERE Email = :email";
+    // Fetch the user's data from the database
+    $sql = "SELECT ID, Password, two_factor_enabled, two_factor_secret FROM tbluser WHERE Email = :email";
     $query = $dbh->prepare($sql);
     $query->bindParam(':email', $email, PDO::PARAM_STR);
     $query->execute();
@@ -21,12 +22,23 @@ if (isset($_POST['login'])) {
     if ($result) {
         // Verify the password
         if (password_verify($password, $result->Password)) {
-            // Set session variables
-            $_SESSION['odlmsuid'] = $result->ID;
-            $_SESSION['login'] = $email;
-
-            // Redirect to the dashboard
-            echo "<script type='text/javascript'> document.location ='dashboard.php'; </script>";
+            
+            // Check if 2FA is enabled
+            if ($result->two_factor_enabled) {
+                // Store temporary session for 2FA verification
+                $_SESSION['pending_user_id'] = $result->ID;
+                $_SESSION['pending_email'] = $email;
+                $_SESSION['two_factor_secret'] = $result->two_factor_secret;
+                
+                // Redirect to 2FA verification
+                echo "<script type='text/javascript'> document.location ='verify_2fa.php'; </script>";
+                exit();
+            } else {
+                // No 2FA - proceed with normal login
+                $_SESSION['odlmsuid'] = $result->ID;
+                $_SESSION['login'] = $email;
+                echo "<script type='text/javascript'> document.location ='dashboard.php'; </script>";
+            }
         } else {
             // Show error message if the password is incorrect
             echo "<script>alert('Invalid Email or Password');</script>";

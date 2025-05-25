@@ -7,6 +7,8 @@ error_reporting(0);
 
 // Include the database connection file
 include('includes/dbconnection.php');
+// Include 2FA functions
+include('includes/2fa_functions.php'); 
 
 // Handle form submission
 if (isset($_POST['login'])) {
@@ -18,8 +20,8 @@ if (isset($_POST['login'])) {
     if (empty($username) || empty($password)) {
         echo "<script>alert('Please fill in all fields.');</script>";
     } else {
-        // Fetch admin details from the database
-        $sql = "SELECT ID, Password FROM tbladmin WHERE UserName = :username";
+        // Fetch admin details from the database (including 2FA fields)
+        $sql = "SELECT ID, Password, two_factor_enabled, two_factor_secret FROM tbladmin WHERE UserName = :username";
         $query = $dbh->prepare($sql);
         $query->bindParam(':username', $username, PDO::PARAM_STR);
         $query->execute();
@@ -27,28 +29,56 @@ if (isset($_POST['login'])) {
 
         // Verify the password
         if ($result && password_verify($password, $result->Password)) {
-            // Set session variables
-            $_SESSION['odlmsaid'] = $result->ID;
-            $_SESSION['login'] = $username;
-
-            // Handle "Remember Me" functionality
-            if (!empty($_POST['remember'])) {
-                // Set cookies for username and password (valid for 10 years)
-                setcookie("user_login", $username, time() + (10 * 365 * 24 * 60 * 60), "/", "", true, true);
-                setcookie("userpassword", $password, time() + (10 * 365 * 24 * 60 * 60), "/", "", true, true);
+            
+            // Check if 2FA is enabled for this user
+            if ($result->two_factor_enabled) {
+                // Store temporary session for 2FA verification
+                $_SESSION['pending_user_id'] = $result->ID;
+                $_SESSION['pending_username'] = $username;
+                $_SESSION['two_factor_secret'] = $result->two_factor_secret;
+                
+                // Handle "Remember Me" functionality
+                if (!empty($_POST['remember'])) {
+                    // Set cookies for username and password (valid for 10 years)
+                    setcookie("user_login", $username, time() + (10 * 365 * 24 * 60 * 60), "/", "", true, true);
+                    setcookie("userpassword", $password, time() + (10 * 365 * 24 * 60 * 60), "/", "", true, true);
+                } else {
+                    // Clear cookies if "Remember Me" is not checked
+                    if (isset($_COOKIE['user_login'])) {
+                        setcookie("user_login", "", time() - 3600, "/");
+                    }
+                    if (isset($_COOKIE['userpassword'])) {
+                        setcookie("userpassword", "", time() - 3600, "/");
+                    }
+                }
+                
+                // Redirect to 2FA verification
+                echo "<script>document.location ='verify_2fa.php';</script>";
+                exit();
             } else {
-                // Clear cookies if "Remember Me" is not checked
-                if (isset($_COOKIE['user_login'])) {
-                    setcookie("user_login", "", time() - 3600, "/");
-                }
-                if (isset($_COOKIE['userpassword'])) {
-                    setcookie("userpassword", "", time() - 3600, "/");
-                }
-            }
+                // No 2FA - proceed with normal login
+                $_SESSION['odlmsaid'] = $result->ID;
+                $_SESSION['login'] = $username;
 
-            // Redirect to the dashboard
-            echo "<script>document.location ='dashboard.php';</script>";
-            exit();
+                // Handle "Remember Me" functionality
+                if (!empty($_POST['remember'])) {
+                    // Set cookies for username and password (valid for 10 years)
+                    setcookie("user_login", $username, time() + (10 * 365 * 24 * 60 * 60), "/", "", true, true);
+                    setcookie("userpassword", $password, time() + (10 * 365 * 24 * 60 * 60), "/", "", true, true);
+                } else {
+                    // Clear cookies if "Remember Me" is not checked
+                    if (isset($_COOKIE['user_login'])) {
+                        setcookie("user_login", "", time() - 3600, "/");
+                    }
+                    if (isset($_COOKIE['userpassword'])) {
+                        setcookie("userpassword", "", time() - 3600, "/");
+                    }
+                }
+
+                // Redirect to the dashboard
+                echo "<script>document.location ='dashboard.php';</script>";
+                exit();
+            }
         } else {
             echo "<script>alert('Invalid username or password.');</script>";
         }
