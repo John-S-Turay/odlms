@@ -31,3 +31,4 @@ jobs:
             admin/includes/dbconnection.php
             user/includes/dbconnection.php
             employee/includes/dbconnection.php
+        verbose: true
