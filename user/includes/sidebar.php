@@ -183,6 +183,14 @@ if (!isset($_SESSION['odlmsuid']) || strlen($_SESSION['odlmsuid']) == 0) {
                         </a>
                     </li>
 
+                     <!-- Enable 2fa -->
+                    <li>
+                        <a href="security_settings.php" style="display: flex; align-items: center; gap: 10px;">
+                            <i class="zmdi zmdi-shield-security" style="font-size: 18px;"></i>
+                            <span class="menu-text">Enable 2-Factor Authentication</span>
+                        </a>
+                    </li>
+
                     <!-- Search -->
                     <li>
                         <a href="search.php">
